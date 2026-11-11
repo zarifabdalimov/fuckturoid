@@ -6,6 +6,7 @@
 // by their Adobe glyph names. Text is measured with Helvetica's AFM widths so
 // amounts can be right-aligned and descriptions wrapped.
 
+import * as R from 'remeda';
 import { czDate, kc } from '../../utils/format.ts';
 import { COL_AMOUNT, COL_PRICE, COL_QTY, DESC_W, EXTRA_NAMES, MARGIN, PAGE_H, PAGE_W, RIGHT } from './preset.ts';
 import type { InvoiceForPdf } from './types.ts';
@@ -39,7 +40,7 @@ function pages(inv: InvoiceForPdf): Page[] {
     ['Způsob platby', 'Převodem'],
   ];
   const step = (RIGHT - MARGIN) / facts.length;
-  facts.forEach(([label, value], i) => {
+  R.forEach(facts, ([label, value], i) => {
     page.text(label, MARGIN + 10 + i * step, y - 4, 'F1', 8, 0.45);
     page.text(value, MARGIN + 10 + i * step, y - 22, 'F2', 11);
   });
@@ -56,7 +57,7 @@ function pages(inv: InvoiceForPdf): Page[] {
       all.push(page);
       y = tableHeader(page, PAGE_H - MARGIN - 14);
     }
-    lines.forEach((line, i) => page.text(line, MARGIN + 8, y - i * 13, 'F1', 10));
+    R.forEach(lines, (line, i) => page.text(line, MARGIN + 8, y - i * 13, 'F1', 10));
     page.textRight(quantity(it.quantity), COL_QTY, y, 'F1', 10);
     page.textRight(kc(it.unitPrice), COL_PRICE, y, 'F1', 10);
     page.textRight(kc(Math.round(it.quantity * it.unitPrice)), COL_AMOUNT - 8, y, 'F1', 10);
@@ -73,7 +74,7 @@ function pages(inv: InvoiceForPdf): Page[] {
 
   // Page numbers when there is more than one.
   if (all.length > 1) {
-    all.forEach((p, i) => p.textRight(`Strana ${i + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5));
+    R.forEach(all, (p, i) => p.textRight(`Strana ${i + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5));
   }
   return all;
 }
@@ -88,13 +89,13 @@ export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
   const catalog = add(''); // filled once the pages' number is known
   const pagesId = add('');
   const encoding = add(
-    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${EXTRA_NAMES.map((n) => `/${n}`).join(' ')}] >>`,
+    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${R.join(R.map(EXTRA_NAMES, (n) => `/${n}`), ' ')}] >>`,
   );
   const f1 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding ${encoding} 0 R >>`);
   const f2 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding ${encoding} 0 R >>`);
   const kids: number[] = [];
   for (const p of ps) {
-    const content = p.ops.join('\n');
+    const content = R.join(p.ops, '\n');
     const stream = add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
     kids.push(
       add(
@@ -104,12 +105,12 @@ export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
     );
   }
   objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
-  objects[pagesId - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(' ')}] /Count ${kids.length} >>`;
+  objects[pagesId - 1] = `<< /Type /Pages /Kids [${R.join(R.map(kids, (k) => `${k} 0 R`), ' ')}] /Count ${kids.length} >>`;
   const info = add(`<< /Title ${literal(`Faktura ${inv.number}`)} /Producer (F*ckturoid) >>`);
 
   let file = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';
   const offsets: number[] = [];
-  objects.forEach((body, i) => {
+  R.forEach(objects, (body, i) => {
     offsets.push(file.length);
     file += `${i + 1} 0 obj\n${body}\nendobj\n`;
   });

@@ -1,5 +1,6 @@
 // Reading ARES's JSON into the app's fields.
 
+import * as R from 'remeda';
 import type { Company, Sidlo } from './types.ts';
 
 export function refused(ico: string, error: string): Company {
@@ -17,7 +18,7 @@ export function streetLine(s: Sidlo): string {
   const orientation =
     s.cisloOrientacni !== undefined ? `/${s.cisloOrientacni}${s.cisloOrientacniPismeno ?? ''}` : '';
   const number = s.cisloDomovni !== undefined ? `${s.cisloDomovni}${orientation}` : '';
-  return [place, number].filter((p) => p !== '').join(' ');
+  return R.join(R.filter([place, number], (p) => p !== ''), ' ');
 }
 
 // Prague is written with its district ("Praha 8"), as on an envelope.

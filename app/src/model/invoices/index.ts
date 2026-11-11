@@ -1,6 +1,7 @@
 // The rules for invoices: numbering, due dates, totals, payment, export.
 // Pure functions: a list in, a new list out.
 
+import * as R from 'remeda';
 import { nextId } from '../../utils/ids.ts';
 import { MISSING, PDF_PREFIX } from './preset.ts';
 import type { Found, Invoice, InvoiceInput } from './types.ts';
@@ -11,7 +12,7 @@ export { addDays, invoiceTotal, nextNumber } from './utils.ts';
 
 // Newest first: by issue date, then by number.
 export function sortInvoices(all: Invoice[]): Invoice[] {
-  return [...all].sort((a, b) => b.issued.localeCompare(a.issued) || b.number.localeCompare(a.number));
+  return R.sortBy(all, [(i) => i.issued, 'desc'], [(i) => i.number, 'desc']);
 }
 
 // Adds an invoice (id "") with the next number, or updates one, keeping its
@@ -19,23 +20,23 @@ export function sortInvoices(all: Invoice[]): Invoice[] {
 export function putInvoice(all: Invoice[], id: string, input: InvoiceInput): Invoice[] {
   const fields = { ...input, due: addDays(input.issued, input.dueDays), total: invoiceTotal(input.items) };
   if (id === '') {
-    return [...all, { id: nextId(all), number: nextNumber(all, input.issued), paid: false, paidOn: '', ...fields }];
+    return R.concat(all, [{ id: nextId(all), number: nextNumber(all, input.issued), paid: false, paidOn: '', ...fields }]);
   }
-  return all.map((i) => (i.id === id ? { ...i, ...fields } : i));
+  return R.map(all, (i) => (i.id === id ? { ...i, ...fields } : i));
 }
 
 // Paid on `day`, or back to unpaid.
 export function setPaid(all: Invoice[], id: string, paid: boolean, day: string): Invoice[] {
-  return all.map((i) => (i.id === id ? { ...i, paid, paidOn: paid ? day : '' } : i));
+  return R.map(all, (i) => (i.id === id ? { ...i, paid, paidOn: paid ? day : '' } : i));
 }
 
 export function removeInvoice(all: Invoice[], id: string): Invoice[] {
-  return all.filter((i) => i.id !== id);
+  return R.filter(all, (i) => i.id !== id);
 }
 
 // The invoice to export, or why there is none.
 export function findInvoice(all: Invoice[], id: string): Found {
-  const invoice = all.find((i) => i.id === id);
+  const invoice = R.find(all, (i) => i.id === id);
   return invoice ? { ok: true, invoice } : { ok: false, error: MISSING };
 }
 

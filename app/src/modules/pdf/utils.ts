@@ -1,6 +1,7 @@
 // Drawing helpers: measuring and encoding text, a page's drawing operators, and
 // the blocks an invoice repeats (a party, the items table's header).
 
+import * as R from 'remeda';
 import {
   BASE, BOLD, COL_AMOUNT, COL_PRICE, COL_QTY, EXTRA, MARGIN, OTHER_WIDTH, REGULAR, RIGHT, WINANSI,
 } from './preset.ts';
@@ -39,7 +40,7 @@ export function quantity(q: number): string {
 export function wrap(text: string, font: Font, size: number, max: number): string[] {
   const lines: string[] = [];
   let line = '';
-  for (const word of text.split(/\s+/).filter(Boolean)) {
+  for (const word of R.filter(text.split(/\s+/), R.isTruthy)) {
     const next = line === '' ? word : `${line} ${word}`;
     if (line !== '' && width(next, font, size) > max) {
       lines.push(line);
@@ -74,12 +75,10 @@ export function party(page: Page, caption: string, p: Party, x: number, top: num
     page.text(line, x, y, 'F2', 11);
     y -= 14;
   }
-  const lines = [
-    p.street,
-    [p.zip, p.city].filter(Boolean).join(' '),
-    p.ico ? `IČO: ${p.ico}` : '',
-    p.dic ? `DIČ: ${p.dic}` : '',
-  ].filter(Boolean);
+  const lines = R.filter(
+    [p.street, R.join(R.filter([p.zip, p.city], R.isTruthy), ' '), p.ico ? `IČO: ${p.ico}` : '', p.dic ? `DIČ: ${p.dic}` : ''],
+    R.isTruthy,
+  );
   for (const line of lines) {
     page.text(line, x, y, 'F1', 10, 0.15);
     y -= 13;

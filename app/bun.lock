@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "app",
+      "dependencies": {
+        "remeda": "^2.59.0",
+      },
+    },
+  },
+  "packages": {
+    "remeda": ["remeda@2.59.0", "", {}, "sha512-iDQVjRfBXmsSjU6MQILkPdRtLjUqmMLeOQP8T1/jzZSwkCeALDKIKUYpMR2DuOYlNs+DTR8GiXsl/r4+eDCObw=="],
+  }
+}

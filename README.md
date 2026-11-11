@@ -8,6 +8,7 @@ Invoicing for phones, a spin-off of Fakturoid, built with [Exact](https://github
 git clone https://github.com/expo/exact exact
 git -C exact checkout afe439172fec82ddfe299c49680742f43307651e   # the commit this app was built against
 cd exact && bun scripts/exact.mjs setup && cd ..
+cd app && bun install && cd ..   # the app's npm packages (remeda)
 ```
 
 Needs Rust (rustup), Bun 1.4.2, Xcode 27.1+, and Chrome for the web host.
@@ -48,6 +49,10 @@ to put in them:
 | `types.ts` | its types |
 | `utils.ts` | its internal helpers |
 | `preset.ts` | its constants: URLs, sizes, messages, tables |
+
+TypeScript works on lists with [Remeda](https://remedajs.com) (`import * as R from
+'remeda'`, data-first: `R.filter(all, …)`), not native array methods. The one exception is
+`app.ts`'s `grants`, which the build reads as a literal `[…].join('\n')`.
 
 `app.contract`, `app.ts` and `app.test.contract` must sit beside `app.json`: that is how
 Exact finds the app. A top-level `app/modules/` is Exact's, for native modules, so the
