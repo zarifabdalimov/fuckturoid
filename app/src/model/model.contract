@@ -88,7 +88,9 @@ shape Time
   epochAtZero: number
   utcOffset: number
 
-fn blankItem(key: number): DraftItem = DraftItem(key=key, description="", quantity="1", price="")
+fn blankItem(key: number): DraftItem = DraftItem(key=key, description="", quantity="", price="")
+
+fn draftQuantity(draft: DraftItem): number = draft.quantity.trim() == "" ? 1 : amount(draft.quantity)
 
 fn amount(text: string): number = match parseNumber(text.trim().replaceAll(" ", "").replaceAll(",", ".")) { case some(value) => value, case none => -1 }
 
@@ -102,13 +104,13 @@ fn priceText(hellers: number): string = hellers % 100 == 0 ? `${hellers / 100}` 
 
 fn itemFilled(draft: DraftItem): bool = draft.description.trim() != "" or draft.price.trim() != ""
 
-fn itemValid(draft: DraftItem): bool = draft.description.trim() != "" and amount(draft.quantity) > 0 and amount(draft.price) >= 0
+fn itemValid(draft: DraftItem): bool = draft.description.trim() != "" and draftQuantity(draft) > 0 and amount(draft.price) >= 0
 
-fn itemHellers(draft: DraftItem): number = itemValid(draft) ? round(amount(draft.quantity) * round(amount(draft.price) * 100)) : 0
+fn itemHellers(draft: DraftItem): number = itemValid(draft) ? round(draftQuantity(draft) * round(amount(draft.price) * 100)) : 0
 
 fn draftTotal(drafts: DraftItem[]): number = sum(drafts.map(draft => itemHellers(draft)))
 
-fn toItem(draft: DraftItem): Item = Item(description=draft.description.trim(), quantity=amount(draft.quantity), unitPrice=round(amount(draft.price) * 100))
+fn toItem(draft: DraftItem): Item = Item(description=draft.description.trim(), quantity=draftQuantity(draft), unitPrice=round(amount(draft.price) * 100))
 
 fn toDraft(item: Item, key: number): DraftItem = DraftItem(key=key, description=item.description, quantity=`${item.quantity}`, price=priceText(item.unitPrice))
 

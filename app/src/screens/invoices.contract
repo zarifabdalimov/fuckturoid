@@ -165,7 +165,7 @@ component InvoiceForm
   derive lines = items.filter(draft => itemFilled(draft))
   derive total = draftTotal(items)
   derive payTo = accountFor(bankAccounts, currency)
-  derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(draft => not itemValid(draft)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
+  derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(draft => not itemValid(draft)).length > 0 ? "Give each item a description and a price to save." : issued == "" ? "Choose the issue date to save." : ""
 
   action pickClient(value: string)
     clientId = value
@@ -229,28 +229,40 @@ component InvoiceForm
                 text `${days} ${days == 1 ? "day" : "days"}`
           footer
             text `Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`
-        section
-          header
-            text "Items"
-          for draft, index in items key=draft.key
-            row delete=removeItem(index) disabled=(items.length <= 1)
-              column flex=1 min-width=0 gap=8 padding-top=6 padding-bottom=6
-                input value=draft.description input=editDesc(index) placeholder="What you did" aria-label=`Item ${index + 1}`
-                  autocapitalize="sentences" testId=`item-desc-${index}`
+        for draft, index in items key=draft.key
+          section
+            header
+              text (items.length > 1 ? `Item ${index + 1}` : "Item")
+            row
+              input value=draft.description input=editDesc(index) placeholder="Description, e.g. App development"
+                aria-label=`Item ${index + 1} description` autocapitalize="sentences" flex=1 min-width=0 testId=`item-desc-${index}`
+            row
+              text "Quantity"
+              input value=draft.quantity input=editQty(index) inputmode="decimal" placeholder="1"
+                aria-label=`Item ${index + 1} quantity` flex=1 min-width=0 text-align="end" testId=`item-qty-${index}`
+            row
+              text "Unit price"
+              input value=draft.price input=editPrice(index) inputmode="decimal" placeholder="0"
+                aria-label=`Item ${index + 1} price` flex=1 min-width=0 text-align="end" testId=`item-price-${index}`
+              text currencySymbol(currency) color="-exact-secondary-label"
+            if itemFilled(draft) and not itemValid(draft) and draft.price.trim() != ""
+              row
+                text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
+            else
+              row
+                text "Amount" color="-exact-secondary-label"
+                text money(itemHellers(draft), currency) font-weight=600 font-variant-numeric="tabular-nums"
+                  margin-left="auto" testId=`item-amount-${index}`
+            if items.length > 1
+              button press=removeItem(index) testId=`remove-item-${index}`
                 row gap=8 align-items="center"
-                  input value=draft.quantity input=editQty(index) inputmode="decimal" aria-label=`Item ${index + 1} quantity`
-                    width="3.5rem" text-align="end" testId=`item-qty-${index}`
-                  text "×" color="-exact-secondary-label"
-                  input value=draft.price input=editPrice(index) inputmode="decimal" placeholder="Price" aria-label=`Item ${index + 1} price`
-                    flex=1 min-width=0 text-align="end" testId=`item-price-${index}`
-                  text currencySymbol(currency) color="-exact-secondary-label"
-                if itemFilled(draft) and not itemValid(draft)
-                  text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
-                else
-                  text money(itemHellers(draft), currency) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
-                    font-variant-numeric="tabular-nums" testId=`item-amount-${index}`
+                  image "symbol:delete" color="-exact-system-red" aria-hidden=true
+                  text "Remove Item" color="-exact-system-red"
+        section
           button press=addItem testId="add-line"
-            text "Add Item"
+            row gap=8 align-items="center"
+              image "symbol:add" aria-hidden=true
+              text "Add Item"
           footer
             text `Total ${money(total, currency)}` font-weight=600 font-variant-numeric="tabular-nums" testId="i-total"
         if saveHint != ""
