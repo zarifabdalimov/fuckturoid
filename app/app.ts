@@ -4,7 +4,15 @@
 
 import type { Answer, Sources } from './app.contract.d.ts';
 import { type Client, putClient, removeClient, sortClients } from './src/model/clients.ts';
-import { type Invoice, putInvoice, removeInvoice, setPaid, sortInvoices } from './src/model/invoices.ts';
+import {
+  findInvoice,
+  type Invoice,
+  pdfFileName,
+  putInvoice,
+  removeInvoice,
+  setPaid,
+  sortInvoices,
+} from './src/model/invoices.ts';
 import { lookupIco } from './src/modules/ares/ares.ts';
 import { invoicePdf } from './src/modules/pdf/invoice-pdf.ts';
 import { store, writeFile } from './src/modules/storage/store.ts';
@@ -50,9 +58,9 @@ const sources: Sources = {
 
   // An invoice's PDF, written where the share sheet can read it.
   makeInvoicePdf: async ([id], _store, storage) => {
-    const inv = (await invoices.load(storage)).find((i) => i.id === id);
-    if (!inv) return { ok: false, error: 'This invoice no longer exists.', path: '' };
-    const path = await writeFile(storage, PDFS, `Faktura-${inv.number}.pdf`, invoicePdf(inv));
+    const found = findInvoice(await invoices.load(storage), id);
+    if (!found.ok) return { ok: false, error: found.error, path: '' };
+    const path = await writeFile(storage, PDFS, pdfFileName(found.invoice), invoicePdf(found.invoice));
     return { ok: true, error: '', path };
   },
 

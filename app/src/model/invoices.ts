@@ -56,6 +56,17 @@ export function setPaid(all: Invoice[], id: string, paid: boolean, day: string):
   return all.map((i) => (i.id === id ? { ...i, paid, paidOn: paid ? day : '' } : i));
 }
 
+// The invoice to export, or why there is none.
+export function findInvoice(all: Invoice[], id: string): { ok: true; invoice: Invoice } | { ok: false; error: string } {
+  const invoice = all.find((i) => i.id === id);
+  return invoice ? { ok: true, invoice } : { ok: false, error: 'This invoice no longer exists.' };
+}
+
+// What an exported invoice is called: "Faktura-2026-0001.pdf".
+export function pdfFileName(inv: Invoice): string {
+  return `Faktura-${inv.number}.pdf`;
+}
+
 export function removeInvoice(all: Invoice[], id: string): Invoice[] {
   return all.filter((i) => i.id !== id);
 }

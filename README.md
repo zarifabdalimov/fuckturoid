@@ -33,7 +33,8 @@ app/
     model/            the business logic
       model.contract  shapes (Client, Invoice…) and the rules screens need (IČO checksum, Kč…)
       clients.ts      one client per IČO, sorting, add/update/remove
-      invoices.ts     numbering, due dates, totals, payment
+      invoices.ts     numbering, due dates, totals, payment, export file name
+      format.ts       how money and dates are written (twin of model.contract's kc, czDate)
       ids.ts
     screens/          one .contract per screen, each taking its data and actions as props
     modules/          services the model doesn't know about

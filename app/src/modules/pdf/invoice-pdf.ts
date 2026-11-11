@@ -6,6 +6,8 @@
 // by their Adobe glyph names. Text is measured with Helvetica's AFM widths so
 // amounts can be right-aligned and descriptions wrapped.
 
+import { czDate, kc } from '../../model/format.ts';
+
 export type Party = {
   name: string;
   ico: string;
@@ -85,19 +87,6 @@ function literal(text: string): string {
     else out += String.fromCharCode(code);
   }
   return `${out})`;
-}
-
-// 150050 hellers → "1 500,50 Kč", as the app shows money.
-export function kc(hellers: number): string {
-  const h = Math.round(hellers);
-  const whole = Math.floor(h / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return `${whole},${String(h % 100).padStart(2, '0')} Kč`;
-}
-
-// "2026-11-25" → "25. 11. 2026".
-function czDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return `${d}. ${m}. ${y}`;
 }
 
 function quantity(q: number): string {
