@@ -1,5 +1,6 @@
 import type { Answer, Sources } from './app.contract.d.ts';
 import { type Client, putClient, removeClient, sortClients } from './src/model/clients/index.ts';
+import { czechIban } from './src/model/bank/index.ts';
 import {
   findInvoice,
   type Invoice,
@@ -8,6 +9,7 @@ import {
   removeInvoice,
   setPaid,
   sortInvoices,
+  withDefaults,
 } from './src/model/invoices/index.ts';
 import { lookupIco } from './src/modules/ares/index.ts';
 import { invoicePdf } from './src/modules/pdf/index.ts';
@@ -40,9 +42,12 @@ const sources: Sources = {
   },
   removeClient: async ([id], _store, storage) => clients.save(storage, removeClient(await clients.load(storage), id)),
 
-  loadInvoices: async (_args, _store, storage) => sortInvoices(await invoices.load(storage)),
-  saveInvoice: async ([id, client, supplier, issued, dueDays, items], _store, storage) =>
-    invoices.save(storage, putInvoice(await invoices.load(storage), id, { client, supplier, issued, dueDays, items })),
+  loadInvoices: async (_args, _store, storage) => sortInvoices(withDefaults(await invoices.load(storage))),
+  saveInvoice: async ([id, client, supplier, issued, dueDays, items, account], _store, storage) =>
+    invoices.save(
+      storage,
+      putInvoice(await invoices.load(storage), id, { client, supplier, issued, dueDays, items, account }),
+    ),
   setInvoicePaid: async ([id, paid, day], _store, storage) =>
     invoices.save(storage, setPaid(await invoices.load(storage), id, paid, day)),
   removeInvoice: async ([id], _store, storage) =>
@@ -51,7 +56,12 @@ const sources: Sources = {
   makeInvoicePdf: async ([id], _store, storage) => {
     const found = findInvoice(await invoices.load(storage), id);
     if (!found.ok) return { ok: false, error: found.error, path: '' };
-    const path = await writeFile(storage, PDFS, pdfFileName(found.invoice), invoicePdf(found.invoice));
+    const path = await writeFile(
+      storage,
+      PDFS,
+      pdfFileName(found.invoice),
+      invoicePdf({ ...found.invoice, iban: czechIban(found.invoice.account ?? '') }),
+    );
     return { ok: true, error: '', path };
   },
 

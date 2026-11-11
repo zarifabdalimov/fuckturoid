@@ -37,6 +37,7 @@ app/
       model.contract  shapes and the rules screens need (IČO checksum, Kč, dates)
       clients/        one client per IČO, sorting, add/update/remove
       invoices/       numbering, due dates, totals, payment, export file name
+      bank/           Czech account → IBAN
     modules/          outside services: ares/, storage/, pdf/
     utils/            shared helpers: format.ts (Kč, dates), ids.ts, zod.ts
 ```
@@ -75,6 +76,8 @@ reads them without running any code. Contract can't import TypeScript, so `kc` a
 - **Invoices:** numbered per year (2026-0001), a client and your details copied in when
   saved, lines with quantity × price in Kč, due in 7/14/30 days; Paid and Overdue badges,
   a Paid switch, edit, and delete (which asks).
+- **Bank account** (in Your details): Czech format, checked by its check digits; copied into
+  each invoice when saved; the PDF shows it and its IBAN.
 - **PDF export:** the Share button on an invoice makes a Czech A4 PDF (Faktura) and opens
   the share sheet: Save to Files, Mail, AirDrop, Print.
 - **Log Out** (in Your details): asks, then erases your details, clients and invoices and

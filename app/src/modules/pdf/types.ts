@@ -15,6 +15,8 @@ export type InvoiceForPdf = {
   supplier: Party;
   items: { description: string; quantity: number; unitPrice: number }[];
   total: number;
+  account?: string;
+  iban?: string;
 };
 
 export type Font = 'F1' | 'F2';

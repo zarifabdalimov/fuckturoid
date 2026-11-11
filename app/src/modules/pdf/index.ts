@@ -21,19 +21,31 @@ function pages(inv: InvoiceForPdf): Page[] {
   const right = party(page, 'Odběratel', inv.client, MARGIN + half + 10, baseline, half - 20);
   baseline = Math.min(left, right) - 14;
 
-  page.box(MARGIN, baseline - 38, RIGHT - MARGIN, 50, 0.96);
-  const facts: [string, string][] = [
-    ['Datum vystavení', czDate(inv.issued)],
-    ['Datum splatnosti', czDate(inv.due)],
-    ['Variabilní symbol', inv.number.replace(/\D/g, '')],
-    ['Způsob platby', 'Převodem'],
-  ];
+  const account = inv.account ?? '';
+  const iban = inv.iban ?? '';
+  const bandHeight = iban ? 66 : 50;
+  page.box(MARGIN, baseline - bandHeight + 12, RIGHT - MARGIN, bandHeight, 0.96);
+  const variableSymbol = inv.number.replace(/\D/g, '');
+  const facts: [string, string][] = account
+    ? [
+        ['Datum vystavení', czDate(inv.issued)],
+        ['Datum splatnosti', czDate(inv.due)],
+        ['Číslo účtu', account],
+        ['Variabilní symbol', variableSymbol],
+      ]
+    : [
+        ['Datum vystavení', czDate(inv.issued)],
+        ['Datum splatnosti', czDate(inv.due)],
+        ['Variabilní symbol', variableSymbol],
+        ['Způsob platby', 'Převodem'],
+      ];
   const step = (RIGHT - MARGIN) / facts.length;
   R.forEach(facts, ([label, value], index) => {
     page.text(label, MARGIN + 10 + index * step, baseline - 4, 'F1', 8, 0.45);
     page.text(value, MARGIN + 10 + index * step, baseline - 22, 'F2', 11);
   });
-  baseline -= 70;
+  if (iban) page.text(`IBAN ${iban}`, MARGIN + 10 + 2 * step, baseline - 38, 'F1', 8, 0.45);
+  baseline -= bandHeight + 20;
 
   baseline = tableHeader(page, baseline);
   for (const item of inv.items) {

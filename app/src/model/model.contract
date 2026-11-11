@@ -69,6 +69,7 @@ shape Invoice
   total: number
   paid: bool
   paidOn: string
+  account: string
 
 shape DraftItem
   key: number
@@ -111,10 +112,30 @@ fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. 
 
 fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
 
-fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="")
+fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="", account="")
 
 fn invoiceOf(invoices: Invoice[], id: string): Invoice = match first(invoices.filter(invoice => invoice.id == id)) { case some(invoice) => invoice, case none => noInvoice() }
 
 fn invoiceFound(invoices: Invoice[], id: string): bool = invoices.filter(invoice => invoice.id == id).length > 0
 
 fn idLine(client: Client): string = [client.ico == "" ? "" : `IČO ${client.ico}`, client.dic == "" ? "" : `DIČ ${client.dic}`].filter(part => part != "").join(" · ")
+
+fn digitsOnly(text: string): bool = text != "" and text.split("").filter(char => not "0123456789".includes(char)).length == 0
+
+fn digitFromRight(text: string, place: number): number = place < text.length ? amount(text.slice(text.length - 1 - place, text.length - place)) : 0
+
+fn accountNumberSum(number: string): number = digitFromRight(number, 0) + digitFromRight(number, 1) * 2 + digitFromRight(number, 2) * 4 + digitFromRight(number, 3) * 8 + digitFromRight(number, 4) * 5 + digitFromRight(number, 5) * 10 + digitFromRight(number, 6) * 9 + digitFromRight(number, 7) * 7 + digitFromRight(number, 8) * 3 + digitFromRight(number, 9) * 6
+
+fn accountPrefixSum(prefix: string): number = digitFromRight(prefix, 0) + digitFromRight(prefix, 1) * 2 + digitFromRight(prefix, 2) * 4 + digitFromRight(prefix, 3) * 8 + digitFromRight(prefix, 4) * 5 + digitFromRight(prefix, 5) * 10
+
+fn accountBank(account: string): string = account.includes("/") ? account.slice(account.indexOf("/") + 1) : ""
+
+fn accountMain(account: string): string = account.includes("/") ? account.slice(0, account.indexOf("/")) : account
+
+fn accountPrefix(account: string): string = accountMain(account).includes("-") ? accountMain(account).slice(0, accountMain(account).indexOf("-")) : ""
+
+fn accountNumber(account: string): string = accountMain(account).includes("-") ? accountMain(account).slice(accountMain(account).indexOf("-") + 1) : accountMain(account)
+
+fn accountShapeOk(account: string): bool = accountBank(account).length == 4 and digitsOnly(accountBank(account)) and accountNumber(account).length >= 2 and accountNumber(account).length <= 10 and digitsOnly(accountNumber(account)) and (not accountMain(account).includes("-") or accountPrefix(account).length <= 6 and digitsOnly(accountPrefix(account)))
+
+fn accountProblem(account: string): string = account == "" ? "" : not accountShapeOk(account) ? "Write it as 123456789/0800, or 19-123456789/0800 with a prefix." : accountNumberSum(accountNumber(account)) % 11 != 0 or accountPrefixSum(accountPrefix(account)) % 11 != 0 ? "Its check digits don't match. Look for a typo." : ""

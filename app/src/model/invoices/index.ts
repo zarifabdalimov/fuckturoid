@@ -7,6 +7,10 @@ import { addDays, invoiceTotal, nextNumber } from './utils.ts';
 export type { Found, Invoice, InvoiceInput, Item, Party } from './types.ts';
 export { addDays, invoiceTotal, nextNumber } from './utils.ts';
 
+export function withDefaults(all: Invoice[]): Invoice[] {
+  return R.map(all, (invoice) => ({ ...invoice, account: invoice.account ?? '' }));
+}
+
 export function sortInvoices(all: Invoice[]): Invoice[] {
   return R.sortBy(all, [(invoice) => invoice.issued, 'desc'], [(invoice) => invoice.number, 'desc']);
 }

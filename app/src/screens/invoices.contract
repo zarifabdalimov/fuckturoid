@@ -126,6 +126,10 @@ component InvoiceDetail
               row
                 text "Due"
                 text czDate(inv.due) testId="invoice-due"
+              if inv.account != ""
+                row
+                  text "Pay to"
+                  text inv.account testId="invoice-account"
             PartySection(title="From", party=inv.supplier, prefix="from")
             section
               button press=askRemove destructive=true testId="delete-invoice"

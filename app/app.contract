@@ -26,6 +26,7 @@ component App
   state street = "" persist
   state city = "" persist
   state zip = "" persist
+  state account = "" persist
   mutation looked as shape Company then afterLookup
   derive ares = reply(looked)
   derive canFinish = name.trim() != ""
@@ -104,6 +105,8 @@ component App
     city = value
   action editZip(value: string)
     zip = value
+  action editAccount(value: string)
+    account = value.replaceAll(" ", "")
 
   action reloadInvoices
     refresh invoices
@@ -113,7 +116,7 @@ component App
     nav = push(nav, path("editInvoice", id))
   action saveInvoice(id: string, clientId: string, issued: string, dueDays: number, items: Item[])
     if not pending(invoiceSaved)
-      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email=""), issued, dueDays, items)
+      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email=""), issued, dueDays, items, account)
   action afterInvoiceSave
     if match invoiceSaved { case some(answer) => answer.ok, case none => false }
       if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
@@ -219,6 +222,7 @@ component App
     street = ""
     city = ""
     zip = ""
+    account = ""
     query = ""
     nav = back(nav)
 
@@ -238,10 +242,10 @@ component App
                   Welcome(route=entry.id, start=start)
               if entry.name == "details"
                 Details(route=entry.id, onboarded=onboarded, canFinish=canFinish,
-                  ico=ico, name=name, dic=dic, street=street, city=city, zip=zip,
+                  ico=ico, name=name, dic=dic, street=street, city=city, zip=zip, account=account,
                   ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
                   finish=finish, logout=askLogout, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
-                  editStreet=editStreet, editCity=editCity, editZip=editZip)
+                  editStreet=editStreet, editCity=editCity, editZip=editZip, editAccount=editAccount)
               if entry.name == "invoice"
                 InvoiceDetail(route=entry.id, id=entry.params.id, invoices=invoices, today=today, loading=pending(invoices),
                   edit=openEditInvoice(entry.params.id), setPaid=setInvoicePaid(entry.params.id),

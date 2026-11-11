@@ -1,4 +1,4 @@
-use Company from "../model/model.contract"
+use Company, accountProblem from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
 
 component Details
@@ -12,6 +12,7 @@ component Details
     street: string
     city: string
     zip: string
+    account: string
     ares: Company
     lookingUp: bool
     lookupFailed: bool
@@ -24,11 +25,12 @@ component Details
     editStreet: action
     editCity: action
     editZip: action
+    editAccount: action
   view
     column navigationKey=`${route}` navigationScroll="form" position="absolute" inset=0
       display="flex" flex-direction="column"
       header display="flex" align-items="center"
-        text "Your details" role="heading" aria-level=1 flex=1
+        text "Your details" role="heading" aria-level=2 flex=1
         if not onboarded
           button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
             text "Done"
@@ -57,6 +59,15 @@ component Details
               autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
           footer
             text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
+        section
+          header
+            text "Bank account"
+          row
+            input value=account input=editAccount placeholder="123456789/0800" aria-label="Bank account"
+              autocapitalize="none" testId="account" flex=1 min-width=0
+          footer
+            text (accountProblem(account) != "" ? accountProblem(account) : "Clients pay to this account. It goes on every invoice, with its IBAN.")
+              color=(accountProblem(account) != "" ? "-exact-system-red" : "-exact-secondary-label") testId="account-hint"
         if onboarded
           section
             button press=logout destructive=true testId="logout"
