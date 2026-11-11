@@ -269,11 +269,13 @@ component InvoiceStats
     section
       row align-items="flex-start" gap=12 padding-top=8 padding-bottom=8
         Stat(label="Unpaid", count=unpaid.length, amounts=amountsLine(unpaid),
-          note=(late == 0 ? "" : `${late} overdue`), testPrefix="stat-unpaid")
-        Stat(label="Paid", count=paid.length, amounts=amountsLine(paid), note="", testPrefix="stat-paid")
-        Stat(label="All", count=invoices.length, amounts=amountsLine(invoices), note="", testPrefix="stat-all")
+          note=(late == 0 ? "" : `${late} overdue`), tint="-exact-system-red", testPrefix="stat-unpaid")
+        Stat(label="Paid", count=paid.length, amounts=amountsLine(paid), note="", tint="-exact-system-green",
+          testPrefix="stat-paid")
+        Stat(label="All", count=invoices.length, amounts=amountsLine(invoices), note="", tint="-exact-label",
+          testPrefix="stat-all")
       footer
-        text "Last 12 months, by issue date."
+        text "Last 12 months, by issue date." testId="stats-period"
 
 component Stat
   props
@@ -281,11 +283,12 @@ component Stat
     count: number
     amounts: string
     note: string
+    tint: string
     testPrefix: string
   view
-    column flex=1 min-width=0 gap=2
-      text label font="-exact-footnote" font-weight=600 color="-exact-secondary-label"
-      text `${count}` font="-exact-title2" font-weight=700 color="-exact-label" font-variant-numeric="tabular-nums"
+    column flex=1 min-width=0 gap=2 align-items="center" text-align="center"
+      text label font="-exact-footnote" font-weight=600 color=tint
+      text `${count}` font="-exact-title2" font-weight=700 color=tint font-variant-numeric="tabular-nums"
         aria-label=invoiceCount(count) testId=`${testPrefix}-count`
       text amounts font="-exact-caption1" color="-exact-secondary-label" font-variant-numeric="tabular-nums"
         testId=`${testPrefix}-amount`
