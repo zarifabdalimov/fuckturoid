@@ -31,6 +31,7 @@ app/
   app.contract        the root: all state, data, actions, routes
   app.ts              the data module: grants, and each source: load → rule → save
   app.test.contract   tests
+  app.tamber          brand colours (the landing screen's gradient and ink)
   src/
     screens/          one .contract per screen (and parts: Confirm, TabBar, IcoSection)
     model/            business logic
