@@ -4,15 +4,15 @@
 // Invoices and Clients. Both are kept in files by app.ts.
 //
 // This file is the root: every state, resource, mutation and action, the routes
-// and the tab bar. Each screen's layout is in screens/, the shapes and pure
-// functions in model.contract.
+// and the tab bar. Each screen's layout is in src/screens/, the shapes and pure
+// functions in src/model.contract; app.ts answers its data from src/modules/.
 
-use Company, Client, Reply, FileReply, Invoice, DraftItem, Time, icoValid, icoBad, icoMessage, clientOf, matches from "./model.contract"
-use blankItem, itemFilled, itemValid, draftTotal, toItem, toDraft, invoiceOf from "./model.contract"
-use Welcome from "./screens/welcome.contract"
-use InvoiceList, InvoiceDetail, InvoiceForm from "./screens/invoices.contract"
-use Details from "./screens/details.contract"
-use ClientList, ClientDetail, ClientForm from "./screens/clients.contract"
+use Company, Client, Reply, FileReply, Invoice, DraftItem, Time, icoValid, icoBad, icoMessage, clientOf, matches from "./src/model.contract"
+use blankItem, itemFilled, itemValid, draftTotal, toItem, toDraft, invoiceOf from "./src/model.contract"
+use Welcome from "./src/screens/welcome.contract"
+use InvoiceList, InvoiceDetail, InvoiceForm from "./src/screens/invoices.contract"
+use Details from "./src/screens/details.contract"
+use ClientList, ClientDetail, ClientForm from "./src/screens/clients.contract"
 
 routes nav
   tab invoices "/"

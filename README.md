@@ -23,11 +23,25 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 
 ## Layout
 
-- `app/app.contract`: the root: all state, data, actions, routes and the tab bar
-- `app/model.contract`: shapes (Client, Company, Reply) and pure functions (IČO checksum…)
-- `app/screens/*.contract`: one file per screen; each takes its data and actions as props
-- `app/app.ts`: the data module: ARES lookup, the clients and invoices files
-- `app/invoice-pdf.ts`: an invoice as a PDF (hand-written, no library or embedded font)
+```
+app/
+  app.json            the manifest: name, bundle id, hosts
+  app.contract        the root: all state, data, actions, routes and the tab bar
+  app.ts              the data module: grants, and each source wired to src/modules
+  app.test.contract   tests
+  src/
+    model.contract    shapes (Client, Invoice…) and pure functions (IČO checksum, Kč…)
+    screens/          one .contract per screen, each taking its data and actions as props
+    modules/
+      ares/           ARES lookup by IČO
+      storage/        lists kept as JSON files in the app's storage
+      pdf/            an invoice as a PDF (hand-written, no library or embedded font)
+```
+
+`app.contract`, `app.ts` and `app.test.contract` must sit beside `app.json`: that is how
+Exact finds the app. A top-level `app/modules/` is Exact's, for native modules, so the
+TypeScript modules live in `src/modules/`. Grants stay written out in `app.ts`: the build
+reads them without running any code.
 
 ## Features
 

@@ -1,120 +1,28 @@
-import type { Answer, Result, Sources, Storage } from './app.contract.d.ts';
-import { invoicePdf } from './invoice-pdf.ts';
+// The data module: every source app.contract asks for, wired to src/modules.
+// It holds the app's grants (what it may reach) and the rules that tie the
+// modules together: invoice numbering and due dates, a client's unique IČO.
 
-// ARES, the Czech register of economic subjects (https://ares.gov.cz).
-const ARES = 'https://ares.gov.cz';
+import type { Answer, Result, Sources } from './app.contract.d.ts';
+import { lookupIco } from './src/modules/ares/ares.ts';
+import { invoicePdf } from './src/modules/pdf/invoice-pdf.ts';
+import { nextId, store, writeFile } from './src/modules/storage/store.ts';
+
 const CLIENTS = 'app:/data/clients.json';
 const INVOICES = 'app:/data/invoices.json';
+// Exported PDFs: made again whenever they're shared.
 const PDFS = 'app:/cache/invoices';
+
+// What the app may reach. The build reads this without running the module, so
+// it is written out here rather than gathered from the modules.
 export const grants = [
-  `net.fetch ${ARES}`,
+  'net.fetch https://ares.gov.cz',
   `fs.read ${CLIENTS}`,
   `fs.write ${CLIENTS}`,
   `fs.read ${INVOICES}`,
   `fs.write ${INVOICES}`,
-  // Exported PDFs: made again whenever they're shared.
   `fs.read ${PDFS}`,
   `fs.write ${PDFS}`,
 ].join('\n');
-
-type Company = Result<'lookupIco'>;
-
-type Sidlo = {
-  nazevObce?: string;
-  nazevMestskehoObvodu?: string;
-  nazevCastiObce?: string;
-  nazevUlice?: string;
-  cisloDomovni?: number;
-  cisloOrientacni?: number;
-  cisloOrientacniPismeno?: string;
-  psc?: number;
-  textovaAdresa?: string;
-};
-
-function refused(ico: string, error: string): Company {
-  return { ok: false, error, ico, name: '', dic: '', street: '', city: '', zip: '' };
-}
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object';
-}
-
-// "Rohanské nábřeží 678/23": the street (or the village part when there is no
-// street), the house number, then the orientation number with its letter.
-function streetLine(s: Sidlo): string {
-  const place = s.nazevUlice ?? s.nazevCastiObce ?? s.nazevObce ?? '';
-  const orientation =
-    s.cisloOrientacni !== undefined ? `/${s.cisloOrientacni}${s.cisloOrientacniPismeno ?? ''}` : '';
-  const number = s.cisloDomovni !== undefined ? `${s.cisloDomovni}${orientation}` : '';
-  return [place, number].filter((p) => p !== '').join(' ');
-}
-
-// Prague is written with its district ("Praha 8"), as on an envelope.
-function cityLine(s: Sidlo): string {
-  if (s.nazevObce === 'Praha' && s.nazevMestskehoObvodu) return s.nazevMestskehoObvodu;
-  return s.nazevObce ?? '';
-}
-
-function zipLine(psc: number | undefined): string {
-  if (psc === undefined) return '';
-  const digits = String(psc).padStart(5, '0');
-  return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-}
-
-async function lookupIco(ico: string): Promise<Company> {
-  const response = await fetch(`${ARES}/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`, {
-    headers: { Accept: 'application/json' },
-    exactTimeout: 10000,
-  });
-  if (response.status === 404 || response.status === 400) {
-    return refused(ico, `ARES has no company with IČO ${ico}.`);
-  }
-  if (!response.ok) {
-    throw new Error(`ARES answered ${response.status}.`);
-  }
-  const body: unknown = await response.json();
-  if (!isObject(body) || typeof body.obchodniJmeno !== 'string') {
-    throw new Error('ARES sent an answer this app does not understand.');
-  }
-  const sidlo: Sidlo = isObject(body.sidlo) ? (body.sidlo as Sidlo) : {};
-  const structured = sidlo.nazevObce !== undefined;
-  return {
-    ok: true,
-    error: '',
-    ico,
-    name: body.obchodniJmeno,
-    dic: typeof body.dic === 'string' ? body.dic : '',
-    street: structured ? streetLine(sidlo) : (sidlo.textovaAdresa ?? ''),
-    city: structured ? cityLine(sidlo) : '',
-    zip: zipLine(sidlo.psc),
-  };
-}
-
-// A list kept in a file of the app's own; memory holds it between requests.
-function store<T>(file: string) {
-  let items: T[] | null = null;
-  return {
-    async load(storage: Storage): Promise<T[]> {
-      if (!items) {
-        items = await storage.fs.readFile(file).then(
-          (bytes) => JSON.parse(new TextDecoder().decode(bytes)) as T[],
-          (e) => {
-            if (e.code === 'ENOENT') return []; // no file yet
-            throw e;
-          },
-        );
-      }
-      return items;
-    },
-    async save(storage: Storage, next: T[]): Promise<{ ok: boolean; error: string }> {
-      items = next;
-      await storage.fs.atomicWriteFile(file, new TextEncoder().encode(JSON.stringify(next)));
-      return { ok: true, error: '' };
-    },
-  };
-}
-
-const nextId = (xs: { id: string }[]): string => String(Math.max(0, ...xs.map((x) => Number(x.id))) + 1);
 
 type Client = Result<'loadClients'>[number];
 type Invoice = Result<'loadInvoices'>[number];
@@ -178,9 +86,7 @@ const sources: Sources = {
   makeInvoicePdf: async ([id], _store, storage) => {
     const inv = (await invoices.load(storage)).find((i) => i.id === id);
     if (!inv) return { ok: false, error: 'This invoice no longer exists.', path: '' };
-    const path = `${PDFS}/Faktura-${inv.number}.pdf`;
-    await storage.fs.mkdir(PDFS).catch(() => {}); // already there
-    await storage.fs.atomicWriteFile(path, invoicePdf(inv));
+    const path = await writeFile(storage, PDFS, `Faktura-${inv.number}.pdf`, invoicePdf(inv));
     return { ok: true, error: '', path };
   },
 
