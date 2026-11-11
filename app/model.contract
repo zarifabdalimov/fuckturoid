@@ -82,6 +82,12 @@ shape DraftItem
   quantity: string
   price: string
 
+// A file the data module made, or why it couldn't.
+shape FileReply
+  ok: bool
+  error: string
+  path: string
+
 shape Time
   epochAtZero: number
   utcOffset: number

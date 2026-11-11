@@ -26,7 +26,8 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 - `app/app.contract`: the root: all state, data, actions, routes and the tab bar
 - `app/model.contract`: shapes (Client, Company, Reply) and pure functions (IČO checksum…)
 - `app/screens/*.contract`: one file per screen; each takes its data and actions as props
-- `app/app.ts`: the data module: ARES lookup and the clients file
+- `app/app.ts`: the data module: ARES lookup, the clients and invoices files
+- `app/invoice-pdf.ts`: an invoice as a PDF (hand-written, no library or embedded font)
 
 ## Features
 
@@ -37,5 +38,7 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 - **Invoices:** numbered per year (2026-0001), a client and your details copied in when
   saved, lines with quantity × price in Kč, due in 7/14/30 days; Paid and Overdue badges,
   a Paid switch, edit, and delete (which asks).
+- **PDF export:** the Share button on an invoice makes a Czech A4 PDF (Faktura) and opens
+  the share sheet: Save to Files, Mail, AirDrop, Print.
 - **Log Out** (in Your details): asks, then erases your details, clients and invoices and
   returns to the landing screen.

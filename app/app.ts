@@ -1,15 +1,20 @@
 import type { Answer, Result, Sources, Storage } from './app.contract.d.ts';
+import { invoicePdf } from './invoice-pdf.ts';
 
 // ARES, the Czech register of economic subjects (https://ares.gov.cz).
 const ARES = 'https://ares.gov.cz';
 const CLIENTS = 'app:/data/clients.json';
 const INVOICES = 'app:/data/invoices.json';
+const PDFS = 'app:/cache/invoices';
 export const grants = [
   `net.fetch ${ARES}`,
   `fs.read ${CLIENTS}`,
   `fs.write ${CLIENTS}`,
   `fs.read ${INVOICES}`,
   `fs.write ${INVOICES}`,
+  // Exported PDFs: made again whenever they're shared.
+  `fs.read ${PDFS}`,
+  `fs.write ${PDFS}`,
 ].join('\n');
 
 type Company = Result<'lookupIco'>;
@@ -168,6 +173,16 @@ const sources: Sources = {
     ),
   removeInvoice: async ([id], _store, storage) =>
     invoices.save(storage, (await invoices.load(storage)).filter((i) => i.id !== id)),
+
+  // An invoice's PDF, written where the share sheet can read it.
+  makeInvoicePdf: async ([id], _store, storage) => {
+    const inv = (await invoices.load(storage)).find((i) => i.id === id);
+    if (!inv) return { ok: false, error: 'This invoice no longer exists.', path: '' };
+    const path = `${PDFS}/Faktura-${inv.number}.pdf`;
+    await storage.fs.mkdir(PDFS).catch(() => {}); // already there
+    await storage.fs.atomicWriteFile(path, invoicePdf(inv));
+    return { ok: true, error: '', path };
+  },
 
   // Log out: every client and invoice on this phone is gone.
   eraseAll: async (_args, _store, storage) => {

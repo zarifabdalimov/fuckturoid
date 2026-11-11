@@ -7,7 +7,7 @@
 // and the tab bar. Each screen's layout is in screens/, the shapes and pure
 // functions in model.contract.
 
-use Company, Client, Reply, Invoice, DraftItem, Time, icoValid, icoBad, icoMessage, clientOf, matches from "./model.contract"
+use Company, Client, Reply, FileReply, Invoice, DraftItem, Time, icoValid, icoBad, icoMessage, clientOf, matches from "./model.contract"
 use blankItem, itemFilled, itemValid, draftTotal, toItem, toDraft, invoiceOf from "./model.contract"
 use Welcome from "./screens/welcome.contract"
 use InvoiceList, InvoiceDetail, InvoiceForm from "./screens/invoices.contract"
@@ -58,10 +58,12 @@ component App
   mutation invoicePaidSaved as shape Reply refreshes invoices
   mutation invoiceRemoved as shape Reply refreshes invoices
   mutation erased as shape Reply refreshes clients, invoices
+  mutation pdfMade as shape FileReply then afterPdf
   derive iTotal = draftTotal(iItems)
   derive iLines = iItems.filter(d => itemFilled(d))
   // Why Save is disabled (not red: nothing is wrong yet).
   derive iSaveHint = pending(invoiceSaved) ? "Saving…" : iClientId == "" ? "Choose a client to save." : iLines.length == 0 ? "Add an item to save." : iLines.filter(d => not itemValid(d)).length > 0 ? "Fix the items marked in red to save." : iIssued == "" ? "Choose the issue date to save." : ""
+  derive pdfPath = match pdfMade { case some(r) => r.ok ? r.path : "", case none => "" }
   derive aimedInvoiceNumber = invoiceOf(invoices, aimedInvoice).number
 
   // The client sheet's drafts; cId is "" for a new client.
@@ -270,6 +272,14 @@ component App
     if match invoiceSaved { case some(r) => r.ok, case none => false }
       if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
         nav = back(nav)
+  // Share: the data module writes the PDF, then the share sheet offers it
+  // (Save to Files, Mail, AirDrop, Print…).
+  action sharePdf(id: string)
+    if not pending(pdfMade)
+      send pdfMade = makeInvoicePdf(id)
+  action afterPdf
+    if pdfPath != ""
+      share(title=`Faktura ${invoiceOf(invoices, top(nav).params.id).number}`, files=[pdfPath])
   action setInvoicePaid(id: string, on: bool)
     send invoicePaidSaved = setInvoicePaid(id, on, formatDate(time.epochAtZero + performanceNow(), time.utcOffset, "iso"))
   action askRemoveInvoice(id: string)
@@ -319,6 +329,7 @@ component App
               if e.name == "invoice"
                 InvoiceDetail(route=e.id, id=e.params.id, invoices=invoices, today=today, loading=pending(invoices),
                   edit=openEditInvoice(e.params.id), setPaid=setInvoicePaid(e.params.id),
+                  share=sharePdf(e.params.id), sharing=pending(pdfMade),
                   askRemove=askRemoveInvoice(e.params.id), back=back)
               if e.name == "newInvoice" or e.name == "editInvoice"
                 InvoiceForm(route=e.id, isNew=(e.name == "newInvoice"), clients=clients, clientId=iClientId,

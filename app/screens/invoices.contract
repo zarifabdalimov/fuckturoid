@@ -82,6 +82,8 @@ component InvoiceDetail
     loading: bool
     edit: action
     setPaid: action
+    share: action
+    sharing: bool
     askRemove: action
     back: action
   view
@@ -91,6 +93,8 @@ component InvoiceDetail
         text (invoiceFound(invoices, id) or loading ? `Invoice ${invoiceOf(invoices, id).number}` : "Not Found")
           role="heading" aria-level=2 testId="invoice-title"
         if invoiceFound(invoices, id)
+          button press=share disabled=sharing aria-label="Share PDF" testId="share-invoice"
+            image "symbol:share"
           button press=edit testId="edit-invoice"
             text "Edit"
       if invoiceFound(invoices, id) or loading
