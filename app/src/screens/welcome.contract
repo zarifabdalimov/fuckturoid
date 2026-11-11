@@ -9,9 +9,7 @@ component Welcome
       scroll flex=1 min-height=0
         column min-height="100%" box-sizing="border-box" padding="72px 28px 24px" justify-content="flex-start"
           align-items="center" text-align="center"
-          column width=72 height=72 border-radius=20 background-color="hero.glass"
-            align-items="center" justify-content="center"
-            image "symbol:document" font="-exact-title1" color="hero.ink" aria-hidden=true
+          image "assets/icon-1024.png" width=96 height=96 border-radius=22 aria-hidden=true testId="app-icon"
           text "F*ckturoid" role="heading" aria-level=1 font-size=46 font-weight=800 letter-spacing=-1
             color="hero.ink" margin-top=28
           text "Invoicing without the f*ckery." font-size=26 font-weight=700 color="hero.ink" margin-top=8
