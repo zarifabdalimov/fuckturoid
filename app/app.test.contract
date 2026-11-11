@@ -1,8 +1,45 @@
+test "the landing screen leads into the details"
+  expect tree has "welcome"
+  expect tree missing "home"
+  tap "get-started"
+  clock settle
+  expect tree has "ico"
+
+test "Done waits for a name, then lands home for good"
+  tap "get-started"
+  clock settle
+  expect disabled "finish"
+  expect text "finish-hint" == "Add your name to finish."
+  type "name" "Jan Novák"
+  expect enabled "finish"
+  tap "finish"
+  clock settle
+  expect tree has "home"
+  expect tree missing "welcome"
+  reload
+  expect tree has "home"
+  expect tree missing "welcome"
+
+test "home opens the details again, without Done"
+  tap "get-started"
+  clock settle
+  type "name" "Jan Novák"
+  tap "finish"
+  clock settle
+  tap "open-details"
+  clock settle
+  expect text "name" == "Jan Novák"
+  expect tree missing "finish"
+
 test "an empty form says what to do"
+  tap "get-started"
+  clock settle
   expect text "ico-hint" == "Enter your IČO and the rest fills in from ARES."
   expect disabled "lookup"
 
 test "a short IČO and a wrong check digit are refused before asking ARES"
+  tap "get-started"
+  clock settle
   type "ico" "1234"
   expect text "ico-hint" == "An IČO has 8 digits."
   expect disabled "lookup"
@@ -11,6 +48,8 @@ test "a short IČO and a wrong check digit are refused before asking ARES"
   expect disabled "lookup"
 
 test "a valid IČO fills the details from ARES"
+  tap "get-started"
+  clock settle
   type "ico" "28888286"
   clock data
   expect text "name" == "STRV s.r.o."
@@ -21,6 +60,8 @@ test "a valid IČO fills the details from ARES"
   expect text "ico-hint" == "Filled in from ARES: STRV s.r.o."
 
 test "ARES out of reach says so and keeps what was typed"
+  tap "get-started"
+  clock settle
   type "name" "Jan Novák"
   fail fetch "https://ares.gov.cz"
   type "ico" "28888286"
@@ -33,8 +74,12 @@ test "ARES out of reach says so and keeps what was typed"
   expect text "name" == "STRV s.r.o."
 
 test "details survive a relaunch"
+  tap "get-started"
+  clock settle
   type "name" "Jan Novák"
   type "city" "Brno"
   reload
+  tap "get-started"
+  clock settle
   expect text "name" == "Jan Novák"
   expect text "city" == "Brno"

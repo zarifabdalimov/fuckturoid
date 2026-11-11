@@ -1,5 +1,8 @@
-// Fuckturoid: invoicing for phones. This screen holds the person's own details,
-// the supplier block of every invoice. An IČO can fill the rest from ARES.
+// Fuckturoid: invoicing for phones.
+// First launch: a landing screen, then the person's own details (the supplier
+// block of every invoice; an IČO fills the rest from ARES), then home.
+
+use EmptyState from "exact:content"
 
 shape Company
   ok: bool
@@ -13,6 +16,7 @@ shape Company
 
 routes nav
   home "/"
+    details "/details"
 
 // One digit of an IČO, or -100 for anything else so the checksum fails.
 fn digit(s: string, i: number): number = match parseNumber(s.slice(i, i + 1)) { case some(n) => n, case none => -100 }
@@ -23,7 +27,8 @@ fn icoCheck(s: string): number = icoSum(s) % 11 == 0 ? 1 : icoSum(s) % 11 == 1 ?
 
 fn icoValid(s: string): bool = s.length == 8 and icoSum(s) >= 0 and digit(s, 7) == icoCheck(s)
 
-component Details
+component App
+  state onboarded = false persist
   state ico = "" persist
   state name = "" persist
   state dic = "" persist
@@ -39,8 +44,20 @@ component Details
   derive replyError = current ? match looked { case some(r) => r.error, case none => "" } : ""
   derive replyName = match looked { case some(r) => r.name, case none => "" }
   derive icoHint = ico == "" ? "Enter your IČO and the rest fills in from ARES." : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : pending(looked) ? "Looking it up in ARES…" : failed(looked) ? "Couldn't reach ARES. Check your connection and try again." : replyError != "" ? replyError : replyOk ? `Filled in from ARES: ${replyName}` : ""
+  derive canFinish = name.trim() != ""
   derive icoProblem = ico != "" and (ico.length != 8 or not icoValid(ico))
 
+  action follow(url: string)
+    nav = go(nav, url)
+  action back
+    nav = back(nav)
+  // Opens the details: from the landing screen, and later from home.
+  action start
+    nav = push(nav, "/details")
+  action finish
+    if canFinish
+      onboarded = true
+      nav = back(nav)
   action editIco(v: string)
     ico = v.trim()
     if icoValid(v.trim()) and not pending(looked)
@@ -67,42 +84,66 @@ component Details
     zip = v
 
   view
-    main navigationKey=`${top(nav).id}` navigationBack="back" testId="app" width="100%" height="100%"
+    main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
       for e in stack(nav) key=e.id
-        column navigationKey=`${e.id}` navigationScroll="form" position="absolute" inset=0
-          display="flex" flex-direction="column"
-          header display="flex" align-items="center"
-            text "Your details" role="heading" aria-level=1 flex=1
-          list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-            section
-              row
-                text "IČO"
-                input value=ico input=editIco submit=lookup placeholder="12345678" aria-label="IČO"
-                  inputmode="numeric" maxlength=8 testId="ico" flex=1 min-width=0 text-align="end"
-              row
-                button press=lookup disabled=(not icoValid(ico) or pending(looked)) testId="lookup"
-                  text (pending(looked) ? "Looking up…" : "Fill in from ARES")
-              footer
-                text icoHint color=(icoProblem or failed(looked) or replyError != "" ? "-exact-system-red" : "-exact-secondary-label") testId="ico-hint"
-            section
-              row
-                input value=name input=editName placeholder="Name or company" aria-label="Name"
-                  autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
-              row
-                text "DIČ"
-                input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
-                  autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
-              footer
-                text "Leave DIČ empty if you aren't registered for VAT."
-            section
-              row
-                input value=street input=editStreet placeholder="Street and number" aria-label="Street"
-                  autocomplete="street-address" testId="street" flex=1 min-width=0
-              row
-                input value=city input=editCity placeholder="City" aria-label="City"
-                  autocomplete="address-level2" testId="city" flex=1 min-width=0
-              row
-                input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
-                  autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
-              footer
-                text "These details appear on every invoice you send."
+        if e.name == "home"
+          if onboarded
+            column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column"
+              header display="flex" align-items="center"
+                text "Invoices" role="heading" aria-level=1 flex=1
+                button press=start aria-label="Your details" testId="open-details"
+                  image "symbol:person"
+              column flex=1 min-height=0 testId="home"
+                EmptyState(symbol="symbol:document", title="No invoices yet", message=`Invoices from ${name} will show up here. Making them is coming next.`)
+          else
+            column navigationKey=`${e.id}` navigationBar="none" position="absolute" inset=0 testId="welcome"
+              scroll flex=1 min-height=0
+                column min-height="100%" box-sizing="border-box" padding=32 gap=20
+                  justify-content="center" align-items="center" text-align="center"
+                  image "symbol:document" font="-exact-large-title" color="AccentColor" aria-hidden=true
+                  text "Fuckturoid" role="heading" aria-level=1 font="-exact-large-title" font-weight=800
+                  text "Invoicing without the fuckery." font="-exact-title2" font-weight=600
+                  text "Bill clients from your phone, get paid, and give zero f*cks about paperwork." color="-exact-secondary-label" max-width="22rem"
+              button press=start buttonStyle="filled" margin=24 testId="get-started"
+                text "Get started"
+        if e.name == "details"
+          column navigationKey=`${e.id}` navigationScroll="form" position="absolute" inset=0
+            display="flex" flex-direction="column"
+            header display="flex" align-items="center"
+              text "Your details" role="heading" aria-level=1 flex=1
+              if not onboarded
+                button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
+                  text "Done"
+            list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+              section
+                row
+                  text "IČO"
+                  input value=ico input=editIco submit=lookup placeholder="12345678" aria-label="IČO"
+                    inputmode="numeric" maxlength=8 testId="ico" flex=1 min-width=0 text-align="end"
+                row
+                  button press=lookup disabled=(not icoValid(ico) or pending(looked)) testId="lookup"
+                    text (pending(looked) ? "Looking up…" : "Fill in from ARES")
+                footer
+                  text icoHint color=(icoProblem or failed(looked) or replyError != "" ? "-exact-system-red" : "-exact-secondary-label") testId="ico-hint"
+              section
+                row
+                  input value=name input=editName placeholder="Name or company" aria-label="Name"
+                    autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
+                row
+                  text "DIČ"
+                  input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
+                    autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
+                footer
+                  text "Leave DIČ empty if you aren't registered for VAT."
+              section
+                row
+                  input value=street input=editStreet placeholder="Street and number" aria-label="Street"
+                    autocomplete="street-address" testId="street" flex=1 min-width=0
+                row
+                  input value=city input=editCity placeholder="City" aria-label="City"
+                    autocomplete="address-level2" testId="city" flex=1 min-width=0
+                row
+                  input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
+                    autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
+                footer
+                  text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
