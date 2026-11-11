@@ -19,6 +19,16 @@ shape Client
   email: string
   currency: string
 
+shape StatItem
+  key: string
+  label: string
+  count: number
+  amounts: string
+  late: number
+  symbol: string
+  tint: string
+  wash: string
+
 shape Choice
   value: string
   label: string
@@ -185,3 +195,7 @@ fn sumIn(invoices: Invoice[], currency: string): number = sum(invoices.filter(in
 fn amountsLine(invoices: Invoice[]): string = invoices.length == 0 ? money(0, "CZK") : ["CZK", "EUR", "USD", "GBP"].filter(currency => invoices.filter(invoice => invoice.currency == currency).length > 0).map(currency => money(sumIn(invoices, currency), currency)).join(" · ")
 
 fn invoiceCount(count: number): string = count == 1 ? "1 invoice" : `${count} invoices`
+
+fn topRadius(index: number): number = index == 0 ? 16 : 0
+
+fn bottomRadius(index: number, total: number): number = index == total - 1 ? 16 : 0

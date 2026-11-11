@@ -1,6 +1,6 @@
 use Badge, EmptyState from "exact:content"
 use BankAccount, Client, Invoice, DraftItem, money, currencySymbol, accountFor, clientOf, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
-use Choice, amount, blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount, variableSymbol, languageName from "../model/model.contract"
+use Choice, StatItem, topRadius, bottomRadius, amount, blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount, variableSymbol, languageName from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
 use Button from "../components/button.contract"
 use TextField from "../components/text-field.contract"
@@ -19,6 +19,14 @@ component InvoiceList
     add: action
     addClient: action
     reload: action
+  state filter = "all"
+  state choosing = false
+  derive shown = filter == "paid" ? invoices.filter(invoice => invoice.paid) : filter == "unpaid" ? invoices.filter(invoice => not invoice.paid) : filter == "overdue" ? invoices.filter(invoice => overdue(invoice, today)) : invoices
+  action pickFilter(value: string)
+    filter = value
+    choosing = false
+  action openFilters
+    choosing = not choosing
   view
     column navigationKey=`${route}` navigationScroll="invoices-list" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -42,22 +50,31 @@ component InvoiceList
           Button(label="New Invoice", variant="primary", size="small", leadingIcon="symbol:add", trailingIcon="",
             disabled=false, press=add, buttonId="empty-add-invoice")
       else
-        list id="invoices-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="home"
-          InvoiceStats(invoices=lastYear(invoices, today), today=today)
-          section
-            for inv in invoices key=inv.id
-              link href=path("invoice", inv.id) testId=`invoice-${inv.id}`
-                column flex=1 min-width=0 gap=2 padding-top=4 padding-bottom=4
-                  text inv.client.name
-                  text (inv.paid ? `${inv.number} · Paid ${czDate(inv.paidOn)}` : `${inv.number} · Due ${czDate(inv.due)}`)
-                    font="-exact-subheadline" color="-exact-secondary-label"
-                column align-items="flex-end" gap=4
-                  text money(inv.total, inv.currency) font-variant-numeric="tabular-nums" testId=`invoice-total-${inv.id}`
-                  if inv.paid
-                    Badge(label="Paid", tint=some("-exact-system-green"))
-                  else if overdue(inv, today)
-                    Badge(label="Overdue", tint=some("-exact-system-red"))
-                image "symbol:forward-chevron"
+        scroll id="invoices-list" flex=1 min-height=0 overflow-x="hidden" testId="home"
+          column padding="4px 20px 32px" gap=14 width="100%" box-sizing="border-box"
+            InvoiceStats(invoices=lastYear(invoices, today), today=today, filter=filter, choosing=choosing, pick=pickFilter,
+              open=openFilters)
+            column border-radius=16 overflow="hidden" background-color="surface.card" -exact-layout-transition="280ms ease"
+              if shown.length == 0
+                row padding="16px"
+                  text (filter == "paid" ? "No paid invoices yet." : filter == "overdue" ? "Nothing overdue. Nice." : "Nothing unpaid. Nice.") color="-exact-secondary-label"
+                    testId="filter-empty"
+              for inv, index in shown key=inv.id
+                link href=path("invoice", inv.id) testId=`invoice-${inv.id}` display="flex" flex-direction="row"
+                  align-items="center" gap=10 padding="12px 14px 12px 16px" color="-exact-label" text-decoration="none"
+                  border-top-width=(index == 0 ? 0 : 1) border-top-style="solid" border-top-color="surface.separator"
+                  column flex=1 min-width=0 gap=2
+                    text inv.client.name font-size=17
+                    text (inv.paid ? `${inv.number} · Paid ${czDate(inv.paidOn)}` : `${inv.number} · Due ${czDate(inv.due)}`)
+                      font="-exact-subheadline" color="-exact-secondary-label"
+                  column align-items="flex-end" gap=4
+                    text money(inv.total, inv.currency) font-size=17 font-variant-numeric="tabular-nums"
+                      testId=`invoice-total-${inv.id}`
+                    if inv.paid
+                      Badge(label="Paid", tint=some("-exact-system-green"))
+                    else if overdue(inv, today)
+                      Badge(label="Overdue", tint=some("-exact-system-red"))
+                  image "symbol:forward-chevron" color="-exact-tertiary-label" aria-hidden=true
 
 component PartySection
   props
@@ -302,39 +319,73 @@ component InvoiceForm
           if saveHint != ""
             text saveHint font-size=13 color="control.hint" testId="i-save-hint"
 
+keyframes statEnter
+  from opacity=0 translate="0px -10px"
+
+keyframes statFade
+  to opacity=0
+
 component InvoiceStats
   props
     invoices: Invoice[]
     today: string
+    filter: string
+    choosing: bool
+    pick: action
+    open: action
   derive unpaid = invoices.filter(invoice => not invoice.paid)
   derive paid = invoices.filter(invoice => invoice.paid)
-  derive late = unpaid.filter(invoice => overdue(invoice, today)).length
+  derive late = unpaid.filter(invoice => overdue(invoice, today))
+  derive items = [StatItem(key="all", label="All", count=invoices.length, amounts=amountsLine(invoices), late=0, symbol="symbol:icon.invoices", tint="stat.all", wash="stat.all-wash"), StatItem(key="unpaid", label="Unpaid", count=unpaid.length, amounts=amountsLine(unpaid), late=0, symbol="symbol:icon.unpaid", tint="stat.unpaid", wash="stat.unpaid-wash"), StatItem(key="overdue", label="Overdue", count=late.length, amounts=amountsLine(late), late=0, symbol="symbol:alert-fill", tint="stat.overdue", wash="stat.overdue-wash"), StatItem(key="paid", label="Paid", count=paid.length, amounts=amountsLine(paid), late=0, symbol="symbol:icon.paid", tint="stat.paid", wash="stat.paid-wash")]
+  derive shown = items.filter(item => choosing or item.key == filter)
+  action tapStat(key: string)
+    if choosing
+      pick(key)
+    else
+      open()
   view
-    section
-      row align-items="flex-start" gap=12 padding-top=8 padding-bottom=8
-        Stat(label="Unpaid", count=unpaid.length, amounts=amountsLine(unpaid),
-          note=(late == 0 ? "" : `${late} overdue`), tint="-exact-system-red", testPrefix="stat-unpaid")
-        Stat(label="Paid", count=paid.length, amounts=amountsLine(paid), note="", tint="-exact-system-green",
-          testPrefix="stat-paid")
-        Stat(label="All", count=invoices.length, amounts=amountsLine(invoices), note="", tint="-exact-label",
-          testPrefix="stat-all")
-      footer
-        text "Last 12 months, by issue date." testId="stats-period"
+    column gap=8
+      column role=(choosing ? "radiogroup" : "group") aria-label="Show invoices" testId="stat-choices"
+        for item, index in shown key=item.key
+          column animation=(choosing and item.key != filter ? "statEnter 240ms ease-out both" : "none")
+            -exact-layout-transition="260ms ease" -exact-exit-animation="statFade 140ms ease-in both"
+            Stat(item=item, selected=(item.key == filter), collapsed=(not choosing), top=topRadius(index),
+              bottom=bottomRadius(index, shown.length), press=tapStat(item.key), testPrefix=`stat-${item.key}`)
+      text (choosing ? "Pick what the list shows." : "Last 12 months, by issue date. Tap to change the filter.")
+        font="-exact-footnote" color="-exact-secondary-label" padding="0 4px" testId="stats-period"
+        -exact-layout-transition="260ms ease"
 
 component Stat
   props
-    label: string
-    count: number
-    amounts: string
-    note: string
-    tint: string
+    item: StatItem
+    selected: bool
+    collapsed: bool
+    top: number
+    bottom: number
+    press: action
     testPrefix: string
   view
-    column flex=1 min-width=0 gap=2 align-items="center" text-align="center"
-      text label font="-exact-footnote" font-weight=600 color=tint
-      text `${count}` font="-exact-title2" font-weight=700 color=tint font-variant-numeric="tabular-nums"
-        aria-label=invoiceCount(count) testId=`${testPrefix}-count`
-      text amounts font="-exact-caption1" color="-exact-secondary-label" font-variant-numeric="tabular-nums"
-        testId=`${testPrefix}-amount`
-      if note != ""
-        text note font="-exact-caption1" font-weight=600 color="-exact-system-red" testId=`${testPrefix}-note`
+    button role=(collapsed ? "button" : "radio") aria-checked=selected aria-expanded=(not collapsed) press=press
+      testId=testPrefix width="100%" min-width=0 height=72 padding="0 14px" box-sizing="border-box"
+      border-top-left-radius=top border-top-right-radius=top border-bottom-left-radius=bottom
+      border-bottom-right-radius=bottom
+      border-width=2 border-style="solid" border-color=(selected ? item.tint : "transparent") background-color=item.wash
+      color="-exact-label" text-align="start"
+      :active
+        opacity=1
+      row width="100%" height="100%" gap=12 align-items="center"
+        column width=44 height=44 border-radius=22 background-color=item.wash align-items="center" justify-content="center"
+          image item.symbol color=item.tint width=24 height=24 aria-hidden=true
+        column flex=1 min-width=0 gap=2
+          row gap=6 align-items="baseline"
+            text `${item.count}` font="-exact-title2" font-weight=800 color=item.tint font-variant-numeric="tabular-nums"
+              aria-label=invoiceCount(item.count) testId=`${testPrefix}-count`
+            text item.label font="-exact-subheadline" font-weight=600 color="-exact-label" white-space="nowrap"
+            row flex=1
+            if item.late > 0
+              text `· ${item.late} overdue` font="-exact-caption1" font-weight=700 color="stat.unpaid" white-space="nowrap"
+                testId=`${testPrefix}-note`
+          text item.amounts font="-exact-caption1" color="-exact-secondary-label" font-variant-numeric="tabular-nums"
+            white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`${testPrefix}-amount`
+        if collapsed
+          image "symbol:chooser" color="-exact-secondary-label" aria-hidden=true
