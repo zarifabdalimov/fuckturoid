@@ -6,11 +6,12 @@
 // This is the root: only it may declare resources, mutations, tasks, persisted
 // state and routes, so it holds those and the actions that write them. Screens
 // in src/screens/ draw, keep their own drafts where they can, and call back
-// here with what to save. Shapes and pure functions are in src/model.contract;
-// app.ts answers the data from src/modules/.
+// here with what to save. Shapes and the rules the screens need are in
+// src/model/model.contract; app.ts answers the data with the rules in
+// src/model/*.ts and the services in src/modules/.
 
-use Company, Client, Item, Reply, FileReply, Invoice, Time, icoValid, reply, aresFound, clientOf, matches from "./src/model.contract"
-use invoiceOf, noInvoice from "./src/model.contract"
+use Company, Client, Item, Reply, FileReply, Invoice, Time, icoValid, reply, aresFound, clientOf, matches from "./src/model/model.contract"
+use invoiceOf, noInvoice from "./src/model/model.contract"
 use Welcome from "./src/screens/welcome.contract"
 use InvoiceList, InvoiceDetail, InvoiceForm from "./src/screens/invoices.contract"
 use Details from "./src/screens/details.contract"

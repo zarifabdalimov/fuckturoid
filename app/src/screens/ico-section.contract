@@ -1,7 +1,7 @@
 // The IČO field with its ARES lookup, a section of a grouped form.
 // Your details and the client sheet both use it; `prefix` keeps their test ids apart.
 // It works out what to say from the last ARES reply the root received.
-use Company, icoValid, icoMessage, icoProblem from "../model.contract"
+use Company, icoValid, icoMessage, icoProblem from "../model/model.contract"
 
 component IcoSection
   props

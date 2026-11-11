@@ -28,9 +28,6 @@ export function store<T>(file: string) {
   };
 }
 
-// The next numeric id after the largest one in use.
-export const nextId = (xs: { id: string }[]): string => String(Math.max(0, ...xs.map((x) => Number(x.id))) + 1);
-
 // A file's bytes written into `dir` (made if missing); the file's path.
 export async function writeFile(storage: Storage, dir: string, name: string, bytes: Uint8Array): Promise<string> {
   const path = `${dir}/${name}`;

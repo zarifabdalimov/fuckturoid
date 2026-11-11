@@ -27,12 +27,16 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 app/
   app.json            the manifest: name, bundle id, hosts
   app.contract        the root: all state, data, actions, routes and the tab bar
-  app.ts              the data module: grants, and each source wired to src/modules
+  app.ts              the data module: grants, and each source: load → rule → save
   app.test.contract   tests
   src/
-    model.contract    shapes (Client, Invoice…) and pure functions (IČO checksum, Kč…)
+    model/            the business logic
+      model.contract  shapes (Client, Invoice…) and the rules screens need (IČO checksum, Kč…)
+      clients.ts      one client per IČO, sorting, add/update/remove
+      invoices.ts     numbering, due dates, totals, payment
+      ids.ts
     screens/          one .contract per screen, each taking its data and actions as props
-    modules/
+    modules/          services the model doesn't know about
       ares/           ARES lookup by IČO
       storage/        lists kept as JSON files in the app's storage
       pdf/            an invoice as a PDF (hand-written, no library or embedded font)

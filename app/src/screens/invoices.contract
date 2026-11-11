@@ -1,7 +1,7 @@
 // The Invoices tab: the list, an invoice's detail, and the new/edit sheet.
 use Badge, EmptyState from "exact:content"
-use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model.contract"
-use blankItem, draftTotal, toItem, toDraft from "../model.contract"
+use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
+use blankItem, draftTotal, toItem, toDraft from "../model/model.contract"
 
 component InvoiceList
   props

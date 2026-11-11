@@ -1,6 +1,6 @@
 // The Clients tab: the list, a client's detail, and the add/edit sheet.
 use EmptyState from "exact:content"
-use Client, Company, clientOf, clientLine, found from "../model.contract"
+use Client, Company, clientOf, clientLine, found from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
 
 component ClientList
