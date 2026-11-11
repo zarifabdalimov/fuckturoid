@@ -6,6 +6,7 @@
     "start": "bun exact.mjs serve dist"
   },
   "dependencies": {
-    "remeda": "^2.59.0"
+    "remeda": "^2.59.0",
+    "zod": "^3.25.76"
   }
 }

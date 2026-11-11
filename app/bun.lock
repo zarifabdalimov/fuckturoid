@@ -6,10 +6,13 @@
       "name": "app",
       "dependencies": {
         "remeda": "^2.59.0",
+        "zod": "^3.25.76",
       },
     },
   },
   "packages": {
     "remeda": ["remeda@2.59.0", "", {}, "sha512-iDQVjRfBXmsSjU6MQILkPdRtLjUqmMLeOQP8T1/jzZSwkCeALDKIKUYpMR2DuOYlNs+DTR8GiXsl/r4+eDCObw=="],
+
+    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
   }
 }

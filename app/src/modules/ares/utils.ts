@@ -7,10 +7,6 @@ export function refused(ico: string, error: string): Company {
   return { ok: false, error, ico, name: '', dic: '', street: '', city: '', zip: '' };
 }
 
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object';
-}
-
 // "Rohanské nábřeží 678/23": the street (or the village part when there is no
 // street), the house number, then the orientation number with its letter.
 export function streetLine(seat: Sidlo): string {

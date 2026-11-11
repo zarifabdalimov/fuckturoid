@@ -2,8 +2,8 @@
 // company's name, DIČ and registered address by its IČO.
 
 import { ARES, COMPANY_PATH, TIMEOUT_MS } from './preset.ts';
-import type { Company, Sidlo } from './types.ts';
-import { cityLine, isObject, refused, streetLine, zipLine } from './utils.ts';
+import { type Company, SubjectSchema } from './types.ts';
+import { cityLine, refused, streetLine, zipLine } from './utils.ts';
 
 export type { Company } from './types.ts';
 
@@ -18,18 +18,19 @@ export async function lookupIco(ico: string): Promise<Company> {
   if (!response.ok) {
     throw new Error(`ARES answered ${response.status}.`);
   }
-  const body: unknown = await response.json();
-  if (!isObject(body) || typeof body.obchodniJmeno !== 'string') {
-    throw new Error('ARES sent an answer this app does not understand.');
+  const parsed = SubjectSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    throw new Error(`ARES sent an answer this app does not understand: ${parsed.error.message}`);
   }
-  const sidlo: Sidlo = isObject(body.sidlo) ? (body.sidlo as Sidlo) : {};
+  const subject = parsed.data;
+  const sidlo = subject.sidlo ?? {};
   const structured = sidlo.nazevObce !== undefined;
   return {
     ok: true,
     error: '',
     ico,
-    name: body.obchodniJmeno,
-    dic: typeof body.dic === 'string' ? body.dic : '',
+    name: subject.obchodniJmeno,
+    dic: subject.dic ?? '',
     street: structured ? streetLine(sidlo) : (sidlo.textovaAdresa ?? ''),
     city: structured ? cityLine(sidlo) : '',
     zip: zipLine(sidlo.psc),
