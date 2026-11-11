@@ -3,7 +3,7 @@
 // ARES and the PDF come from src/modules/.
 
 import type { Answer, Sources } from './app.contract.d.ts';
-import { type Client, putClient, removeClient, sortClients } from './src/model/clients.ts';
+import { type Client, putClient, removeClient, sortClients } from './src/model/clients/index.ts';
 import {
   findInvoice,
   type Invoice,
@@ -12,10 +12,10 @@ import {
   removeInvoice,
   setPaid,
   sortInvoices,
-} from './src/model/invoices.ts';
-import { lookupIco } from './src/modules/ares/ares.ts';
-import { invoicePdf } from './src/modules/pdf/invoice-pdf.ts';
-import { store, writeFile } from './src/modules/storage/store.ts';
+} from './src/model/invoices/index.ts';
+import { lookupIco } from './src/modules/ares/index.ts';
+import { invoicePdf } from './src/modules/pdf/index.ts';
+import { store, writeFile } from './src/modules/storage/index.ts';
 
 const CLIENTS = 'app:/data/clients.json';
 const INVOICES = 'app:/data/invoices.json';

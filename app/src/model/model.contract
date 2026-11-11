@@ -110,7 +110,7 @@ fn amount(s: string): number = match parseNumber(s.trim().replaceAll(" ", "").re
 
 fn twoDigits(n: number): string = n < 10 ? `0${n}` : `${n}`
 
-// 150050 hellers → "1 500,50 Kč". The PDF writes money with format.ts's `kc`: keep the two alike.
+// 150050 hellers → "1 500,50 Kč". The PDF writes money with src/utils/format.ts's `kc`: keep the two alike.
 fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(hellers) % 100)} Kč`
 
 // A price field's text for a saved price: "1500" or "1500,50".
@@ -128,7 +128,7 @@ fn toItem(d: DraftItem): Item = Item(description=d.description.trim(), quantity=
 
 fn toDraft(i: Item, key: number): DraftItem = DraftItem(key=key, description=i.description, quantity=`${i.quantity}`, price=priceText(i.unitPrice))
 
-// "2026-11-25" → "25. 11. 2026". The PDF uses format.ts's `czDate`: keep the two alike.
+// "2026-11-25" → "25. 11. 2026". The PDF uses src/utils/format.ts's `czDate`: keep the two alike.
 fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. ${amount(iso.slice(5, 7))}. ${iso.slice(0, 4)}`
 
 fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today

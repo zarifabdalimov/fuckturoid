@@ -26,27 +26,34 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 ```
 app/
   app.json            the manifest: name, bundle id, hosts
-  app.contract        the root: all state, data, actions, routes and the tab bar
+  app.contract        the root: all state, data, actions, routes
   app.ts              the data module: grants, and each source: load → rule → save
   app.test.contract   tests
   src/
-    model/            the business logic
-      model.contract  shapes (Client, Invoice…) and the rules screens need (IČO checksum, Kč…)
-      clients.ts      one client per IČO, sorting, add/update/remove
-      invoices.ts     numbering, due dates, totals, payment, export file name
-      format.ts       how money and dates are written (twin of model.contract's kc, czDate)
-      ids.ts
-    screens/          one .contract per screen, each taking its data and actions as props
-    modules/          services the model doesn't know about
-      ares/           ARES lookup by IČO
-      storage/        lists kept as JSON files in the app's storage
-      pdf/            an invoice as a PDF (hand-written, no library or embedded font)
+    screens/          one .contract per screen (and parts: Confirm, TabBar, IcoSection)
+    model/            business logic
+      model.contract  shapes and the rules screens need (IČO checksum, Kč, dates)
+      clients/        one client per IČO, sorting, add/update/remove
+      invoices/       numbering, due dates, totals, payment, export file name
+    modules/          outside services: ares/, storage/, pdf/
+    utils/            shared helpers: format.ts (Kč, dates), ids.ts
 ```
+
+Each folder under `model/` and `modules/` has the same files, where it has something
+to put in them:
+
+| File | Holds |
+|---|---|
+| `index.ts` | the public API: the only file anything outside the folder imports |
+| `types.ts` | its types |
+| `utils.ts` | its internal helpers |
+| `preset.ts` | its constants: URLs, sizes, messages, tables |
 
 `app.contract`, `app.ts` and `app.test.contract` must sit beside `app.json`: that is how
 Exact finds the app. A top-level `app/modules/` is Exact's, for native modules, so the
 TypeScript modules live in `src/modules/`. Grants stay written out in `app.ts`: the build
-reads them without running any code.
+reads them without running any code. Contract can't import TypeScript, so `kc` and
+`czDate` exist in both `model.contract` (screens) and `utils/format.ts` (the PDF).
 
 ## Features
 

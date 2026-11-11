@@ -1,28 +1,28 @@
 // Lists kept as JSON files in the app's own storage, read once and then held
-// in memory; every save rewrites the file atomically.
+// in memory; every save rewrites the file atomically. The paths are app.ts's,
+// whose grants must cover them.
 
 import type { Storage } from '../../../app.contract.d.ts';
+import type { Saved } from './types.ts';
+import { decodeList, encodeList } from './utils.ts';
 
-export type Saved = { ok: boolean; error: string };
+export type { Saved } from './types.ts';
 
 export function store<T>(file: string) {
   let items: T[] | null = null;
   return {
     async load(storage: Storage): Promise<T[]> {
       if (!items) {
-        items = await storage.fs.readFile(file).then(
-          (bytes) => JSON.parse(new TextDecoder().decode(bytes)) as T[],
-          (e) => {
-            if (e.code === 'ENOENT') return []; // no file yet
-            throw e;
-          },
-        );
+        items = await storage.fs.readFile(file).then(decodeList<T>, (e) => {
+          if (e.code === 'ENOENT') return []; // no file yet
+          throw e;
+        });
       }
       return items;
     },
     async save(storage: Storage, next: T[]): Promise<Saved> {
       items = next;
-      await storage.fs.atomicWriteFile(file, new TextEncoder().encode(JSON.stringify(next)));
+      await storage.fs.atomicWriteFile(file, encodeList(next));
       return { ok: true, error: '' };
     },
   };
