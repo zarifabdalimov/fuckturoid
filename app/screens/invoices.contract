@@ -1,16 +1,213 @@
-// The Invoices tab. Empty for now: making invoices comes next.
-use EmptyState from "exact:content"
+// The Invoices tab: the list, an invoice's detail, and the new/edit sheet.
+use Badge, EmptyState from "exact:content"
+use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model.contract"
 
-component Invoices
+component InvoiceList
   props
     route: number
-    name: string
+    invoices: Invoice[]
+    hasClients: bool
+    today: string
+    loading: bool
+    broke: bool
     openDetails: action
+    add: action
+    addClient: action
+    reload: action
   view
-    column navigationKey=`${route}` position="absolute" inset=0 display="flex" flex-direction="column"
+    column navigationKey=`${route}` navigationScroll="invoices-list" position="absolute" inset=0
+      display="flex" flex-direction="column"
       header display="flex" align-items="center"
         text "Invoices" role="heading" aria-level=1 flex=1
         button press=openDetails aria-label="Your details" testId="open-details"
           image "symbol:person"
-      column flex=1 min-height=0 testId="home"
-        EmptyState(symbol="symbol:document", title="No invoices yet", message=`Invoices from ${name} will show up here. Making them is coming next.`)
+        if hasClients
+          button press=add aria-label="New Invoice" testId="add-invoice"
+            image "symbol:add"
+      if broke
+        EmptyState(symbol="symbol:alert", title="Can't Open Invoices", message="Something went wrong reading them.")
+          button press=reload testId="invoices-retry"
+            text "Try Again"
+      else if invoices.length == 0 and not loading and not hasClients
+        EmptyState(symbol="symbol:people", title="Add a client first", message="An invoice needs someone to pay it. Add a client, then come back.")
+          button press=addClient testId="first-client"
+            text "Add Client"
+      else if invoices.length == 0 and not loading
+        EmptyState(symbol="symbol:document", title="No invoices yet", message="Bill a client for your work. It takes a minute.")
+          button press=add testId="empty-add-invoice"
+            text "New Invoice"
+      else
+        list id="invoices-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="home"
+          section
+            for inv in invoices key=inv.id
+              link href=path("invoice", inv.id) testId=`invoice-${inv.id}`
+                column flex=1 min-width=0 gap=2 padding-top=4 padding-bottom=4
+                  text inv.client.name
+                  text (inv.paid ? `${inv.number} · Paid ${czDate(inv.paidOn)}` : `${inv.number} · Due ${czDate(inv.due)}`)
+                    font="-exact-subheadline" color="-exact-secondary-label"
+                column align-items="flex-end" gap=4
+                  text kc(inv.total) font-variant-numeric="tabular-nums" testId=`invoice-total-${inv.id}`
+                  if inv.paid
+                    Badge(label="Paid", tint=some("-exact-system-green"))
+                  else if overdue(inv, today)
+                    Badge(label="Overdue", tint=some("-exact-system-red"))
+                image "symbol:forward-chevron"
+
+// A party on an invoice: name, IDs, address.
+component PartySection
+  props
+    title: string
+    party: Client
+    prefix: string
+  view
+    section
+      header
+        text title
+      row padding-top=10 padding-bottom=10
+        column flex=1 min-width=0 gap=2
+          text party.name font-weight=600 testId=`${prefix}-name`
+          if idLine(party) != ""
+            text idLine(party) font="-exact-subheadline" color="-exact-secondary-label"
+          if party.street != ""
+            text party.street
+          if party.zip != "" or party.city != ""
+            text [party.zip, party.city].filter(p => p != "").join(" ")
+
+component InvoiceDetail
+  props
+    route: number
+    id: string
+    invoices: Invoice[]
+    today: string
+    loading: bool
+    edit: action
+    setPaid: action
+    askRemove: action
+    back: action
+  view
+    column navigationKey=`${route}` navigationScroll=`invoice-${route}` position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" align-items="center"
+        text (invoiceFound(invoices, id) or loading ? `Invoice ${invoiceOf(invoices, id).number}` : "Not Found")
+          role="heading" aria-level=2 testId="invoice-title"
+        if invoiceFound(invoices, id)
+          button press=edit testId="edit-invoice"
+            text "Edit"
+      if invoiceFound(invoices, id) or loading
+        list id=`invoice-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+          for inv in invoices.filter(x => x.id == id) key=inv.id
+            section
+              row
+                text "Total"
+                text kc(inv.total) font="-exact-title2" font-weight=700 color="-exact-label" font-variant-numeric="tabular-nums" testId="invoice-total"
+              row
+                text "Paid"
+                input type="checkbox" switch checked=inv.paid change=setPaid aria-label="Paid" testId="paid-switch"
+              footer
+                text (inv.paid ? `Paid on ${czDate(inv.paidOn)}.` : overdue(inv, today) ? `Overdue since ${czDate(inv.due)}.` : `Due ${czDate(inv.due)}.`)
+                  color=(overdue(inv, today) ? "-exact-system-red" : "-exact-secondary-label") testId="invoice-status"
+            PartySection(title="Bill to", party=inv.client, prefix="bill-to")
+            section
+              header
+                text "Items"
+              for it, i in inv.items key=i
+                row padding-top=6 padding-bottom=6
+                  column flex=1 min-width=0 gap=2
+                    text it.description
+                    text `${it.quantity} × ${kc(it.unitPrice)}` font="-exact-subheadline" color="-exact-secondary-label"
+                  text kc(round(it.quantity * it.unitPrice)) font-variant-numeric="tabular-nums"
+            section
+              row
+                text "Issued"
+                text czDate(inv.issued) testId="invoice-issued"
+              row
+                text "Due"
+                text czDate(inv.due) testId="invoice-due"
+            PartySection(title="From", party=inv.supplier, prefix="from")
+            section
+              button press=askRemove destructive=true testId="delete-invoice"
+                text "Delete Invoice"
+      else
+        EmptyState(symbol="symbol:alert", title="No such invoice", message="It may have been deleted.")
+          button press=back buttonStyle="filled" testId="missing-invoice-back"
+            text "Back to Invoices"
+
+// The new/edit sheet. Its drafts live in the root, which fills them before opening it.
+component InvoiceForm
+  props
+    route: number
+    isNew: bool
+    clients: Client[]
+    clientId: string
+    issued: string
+    dueDays: number
+    items: DraftItem[]
+    total: number
+    saveHint: string
+    canSave: bool
+    cancel: action
+    save: action
+    pickClient: action
+    setIssued: action
+    setDueDays: action
+    editDesc: action
+    editQty: action
+    editPrice: action
+    addItem: action
+    removeItem: action
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`invoice-form-${route}` position="absolute" inset=0
+      header display="flex" align-items="center" justify-content="space-between"
+        button id="back" press=cancel aria-label="Cancel" testId="invoice-cancel"
+          image "symbol:close"
+        text (isNew ? "New Invoice" : "Edit Invoice") role="heading"
+        button press=save buttonStyle="bordered-prominent" aria-label="Save" disabled=(not canSave) testId="invoice-save"
+          image "symbol:checkmark"
+      list id=`invoice-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        section
+          row
+            text "Client"
+            select value=clientId change=pickClient aria-label="Client" testId="i-client"
+              option "Choose…" value=""
+              for c in clients key=c.id
+                option c.name value=c.id
+          row
+            text "Issued"
+            input type="date" value=issued change=setIssued aria-label="Issued" testId="i-issued"
+        section
+          header
+            text "Due"
+          row role="radiogroup" aria-label="Due in"
+            for d in [7, 14, 30] key=d
+              button role="radio" aria-checked=(dueDays == d) press=setDueDays(d) testId=`due-${d}` flex=1
+                text `${d} ${d == 1 ? "day" : "days"}`
+          footer
+            text `Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`
+        section
+          header
+            text "Items"
+          for d, i in items key=d.key
+            row delete=removeItem(i) disabled=(items.length <= 1)
+              column flex=1 min-width=0 gap=8 padding-top=6 padding-bottom=6
+                input value=d.description input=editDesc(i) placeholder="What you did" aria-label=`Item ${i + 1}`
+                  autocapitalize="sentences" testId=`item-desc-${i}`
+                row gap=8 align-items="center"
+                  input value=d.quantity input=editQty(i) inputmode="decimal" aria-label=`Item ${i + 1} quantity`
+                    width="3.5rem" text-align="end" testId=`item-qty-${i}`
+                  text "×" color="-exact-secondary-label"
+                  input value=d.price input=editPrice(i) inputmode="decimal" placeholder="Price" aria-label=`Item ${i + 1} price`
+                    flex=1 min-width=0 text-align="end" testId=`item-price-${i}`
+                  text "Kč" color="-exact-secondary-label"
+                if itemFilled(d) and not itemValid(d)
+                  text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
+                else
+                  text kc(itemHellers(d)) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
+                    font-variant-numeric="tabular-nums" testId=`item-amount-${i}`
+          button press=addItem testId="add-line"
+            text "Add Item"
+          footer
+            text `Total ${kc(total)}` font-weight=600 font-variant-numeric="tabular-nums" testId="i-total"
+        if saveHint != ""
+          section
+            footer
+              text saveHint testId="i-save-hint"

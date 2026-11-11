@@ -1,21 +1,25 @@
 // Fuckturoid: invoicing for phones.
 // First launch: a landing screen, then the person's own details (the supplier
 // block of every invoice; an IČO fills the rest from ARES), then two tabs:
-// Invoices and Clients. Clients are kept in a file by app.ts.
+// Invoices and Clients. Both are kept in files by app.ts.
 //
 // This file is the root: every state, resource, mutation and action, the routes
 // and the tab bar. Each screen's layout is in screens/, the shapes and pure
 // functions in model.contract.
 
-use Company, Client, Reply, icoValid, icoBad, icoMessage, clientOf, matches from "./model.contract"
+use Company, Client, Reply, Invoice, DraftItem, Time, icoValid, icoBad, icoMessage, clientOf, matches from "./model.contract"
+use blankItem, itemFilled, itemValid, draftTotal, toItem, toDraft, invoiceOf from "./model.contract"
 use Welcome from "./screens/welcome.contract"
-use Invoices from "./screens/invoices.contract"
+use InvoiceList, InvoiceDetail, InvoiceForm from "./screens/invoices.contract"
 use Details from "./screens/details.contract"
 use ClientList, ClientDetail, ClientForm from "./screens/clients.contract"
 
 routes nav
   tab invoices "/"
     details "/details"
+    invoice "/invoices/:id"
+    editInvoice "/invoices/:id/edit"
+    newInvoice "/new-invoice"
   tab clients "/clients"
     client "/clients/:id"
     editClient "/clients/:id/edit"
@@ -31,6 +35,33 @@ component App
   state city = "" persist
   state zip = "" persist
   mutation looked as shape Company then afterLookup
+
+  // Today, kept current by a tick: a day key ("2026-11-11") for due dates.
+  resource time = exactTime() as shape Time
+  state now = 0
+  task tick mount
+    every(60000, step)
+  derive today = formatDate(time.epochAtZero + now, time.utcOffset, "iso")
+
+  // The invoice sheet's drafts; iId is "" for a new invoice.
+  state iId = ""
+  state iClientId = ""
+  state iIssued = ""
+  state iDueDays = 14
+  state iItems = [blankItem(0)]
+  // The next line's key: a line keeps its key while others are added and removed.
+  state iNextKey = 1
+  // The invoice the detail's Delete asks about.
+  state aimedInvoice = ""
+  resource invoices = loadInvoices() as shape Invoice[] else empty()
+  mutation invoiceSaved as shape Reply refreshes invoices then afterInvoiceSave
+  mutation invoicePaidSaved as shape Reply refreshes invoices
+  mutation invoiceRemoved as shape Reply refreshes invoices
+  derive iTotal = draftTotal(iItems)
+  derive iLines = iItems.filter(d => itemFilled(d))
+  // Why Save is disabled (not red: nothing is wrong yet).
+  derive iSaveHint = pending(invoiceSaved) ? "Saving…" : iClientId == "" ? "Choose a client to save." : iLines.length == 0 ? "Add an item to save." : iLines.filter(d => not itemValid(d)).length > 0 ? "Fix the items marked in red to save." : iIssued == "" ? "Choose the issue date to save." : ""
+  derive aimedInvoiceNumber = invoiceOf(invoices, aimedInvoice).number
 
   // The client sheet's drafts; cId is "" for a new client.
   state cId = ""
@@ -73,6 +104,8 @@ component App
   derive shown = clients.filter(c => matches(c, query))
   derive aimedName = clientOf(clients, aimed).name
 
+  action step
+    now = performanceNow()
   action pick(tab: string)
     nav = select(nav, tab)
   action follow(url: string)
@@ -118,6 +151,9 @@ component App
   action reloadClients
     refresh clients
   action openAddClient
+    clearClientDraft()
+    nav = push(nav, "/new-client")
+  action clearClientDraft
     cId = ""
     cName = ""
     cIco = ""
@@ -127,7 +163,6 @@ component App
     cZip = ""
     cEmail = ""
     cRefusal = ""
-    nav = push(nav, "/new-client")
   action openEditClient(id: string)
     let c = clientOf(clients, id)
     cId = c.id
@@ -183,6 +218,67 @@ component App
     if top(nav).name == "client" and top(nav).params.id == id
       nav = back(nav)
 
+  // Invoices.
+  action reloadInvoices
+    refresh invoices
+  // From an empty Invoices tab: over to Clients, with the add sheet open.
+  action goAddClient
+    clearClientDraft()
+    nav = push(select(nav, "clients"), "/new-client")
+  action openAddInvoice
+    let at = time.epochAtZero + performanceNow()
+    iId = ""
+    iClientId = clients.length == 1 ? match clients.at(0) { case some(c) => c.id, case none => "" } : ""
+    iIssued = formatDate(at, time.utcOffset, "iso")
+    iDueDays = 14
+    iItems = [blankItem(0)]
+    iNextKey = 1
+    nav = push(nav, "/new-invoice")
+  action openEditInvoice(id: string)
+    let inv = invoiceOf(invoices, id)
+    iId = inv.id
+    iClientId = inv.client.id
+    iIssued = inv.issued
+    iDueDays = inv.dueDays
+    iItems = inv.items.length == 0 ? [blankItem(0)] : inv.items.map((it, j) => toDraft(it, j))
+    iNextKey = inv.items.length + 1
+    nav = push(nav, path("editInvoice", id))
+  action pickInvoiceClient(v: string)
+    iClientId = v
+  action setIssued(v: string)
+    iIssued = v
+  action setDueDays(d: number)
+    iDueDays = d
+  action editItemDesc(i: number, v: string)
+    iItems = iItems.map((d, j) => j == i ? DraftItem(d, description=v) : d)
+  action editItemQty(i: number, v: string)
+    iItems = iItems.map((d, j) => j == i ? DraftItem(d, quantity=v) : d)
+  action editItemPrice(i: number, v: string)
+    iItems = iItems.map((d, j) => j == i ? DraftItem(d, price=v) : d)
+  action addInvoiceItem
+    iItems = iItems.concat([blankItem(iNextKey)])
+    iNextKey = iNextKey + 1
+  action removeInvoiceItem(i: number)
+    if iItems.length > 1
+      iItems = iItems.filter((d, j) => j != i)
+  // The client and your details are copied into the invoice as they are now.
+  action saveInvoice
+    if iSaveHint == ""
+      send invoiceSaved = saveInvoice(iId, clientOf(clients, iClientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email=""), iIssued, iDueDays, iLines.map(d => toItem(d)))
+  action afterInvoiceSave
+    if match invoiceSaved { case some(r) => r.ok, case none => false }
+      if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
+        nav = back(nav)
+  action setInvoicePaid(id: string, on: bool)
+    send invoicePaidSaved = setInvoicePaid(id, on, formatDate(time.epochAtZero + performanceNow(), time.utcOffset, "iso"))
+  action askRemoveInvoice(id: string)
+    aimedInvoice = id
+    showModal("remove-invoice")
+  action removeInvoice(id: string)
+    send invoiceRemoved = removeInvoice(id)
+    if top(nav).name == "invoice" and top(nav).params.id == id
+      nav = back(nav)
+
   view
     main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
       display="flex" flex-direction="column"
@@ -192,7 +288,9 @@ component App
             for e in t.stack key=e.id
               if e.name == "invoices"
                 if onboarded
-                  Invoices(route=e.id, name=name, openDetails=start)
+                  InvoiceList(route=e.id, invoices=invoices, hasClients=(clients.length > 0), today=today,
+                    loading=pending(invoices), broke=failed(invoices),
+                    openDetails=start, add=openAddInvoice, addClient=goAddClient, reload=reloadInvoices)
                 else
                   Welcome(route=e.id, start=start)
               if e.name == "details"
@@ -201,6 +299,16 @@ component App
                   icoHint=icoHint, icoRed=icoRed, lookingUp=pending(looked),
                   finish=finish, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
                   editStreet=editStreet, editCity=editCity, editZip=editZip)
+              if e.name == "invoice"
+                InvoiceDetail(route=e.id, id=e.params.id, invoices=invoices, today=today, loading=pending(invoices),
+                  edit=openEditInvoice(e.params.id), setPaid=setInvoicePaid(e.params.id),
+                  askRemove=askRemoveInvoice(e.params.id), back=back)
+              if e.name == "newInvoice" or e.name == "editInvoice"
+                InvoiceForm(route=e.id, isNew=(e.name == "newInvoice"), clients=clients, clientId=iClientId,
+                  issued=iIssued, dueDays=iDueDays, items=iItems, total=iTotal, saveHint=iSaveHint,
+                  canSave=(iSaveHint == ""), cancel=back, save=saveInvoice, pickClient=pickInvoiceClient,
+                  setIssued=setIssued, setDueDays=setDueDays, editDesc=editItemDesc, editQty=editItemQty,
+                  editPrice=editItemPrice, addItem=addInvoiceItem, removeItem=removeInvoiceItem)
               if e.name == "clients"
                 ClientList(route=e.id, clients=clients, shown=shown, query=query,
                   loading=pending(clients), broke=failed(clients),
@@ -232,4 +340,10 @@ component App
         button press=removeClient(aimed) destructive=true commandfor="remove-client" command="close" testId="remove-client-confirm"
           text "Delete"
         button commandfor="remove-client" command="close" testId="remove-client-cancel"
+          text "Cancel"
+      dialog id="remove-invoice" role="alertdialog" aria-label=`Delete invoice ${aimedInvoiceNumber}?`
+        text "It will be gone for good. This can't be undone."
+        button press=removeInvoice(aimedInvoice) destructive=true commandfor="remove-invoice" command="close" testId="remove-invoice-confirm"
+          text "Delete"
+        button commandfor="remove-invoice" command="close" testId="remove-invoice-cancel"
           text "Cancel"

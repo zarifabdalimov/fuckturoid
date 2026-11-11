@@ -51,3 +51,74 @@ fn matches(c: Client, q: string): bool = c.name.toLowerCase().includes(q.trim().
 
 // "IČO 28888286 · Praha 8", leaving out what's empty.
 fn clientLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.city].filter(p => p != "").join(" · ")
+
+// Invoices.
+
+// A line on a saved invoice: price in hellers (1/100 Kč), as all money is kept.
+shape Item
+  description: string
+  quantity: number
+  unitPrice: number
+
+// A saved invoice. Client and supplier are copies made when it was saved, so a
+// later edit of either doesn't rewrite an invoice already sent.
+shape Invoice
+  id: string
+  number: string
+  issued: string
+  due: string
+  dueDays: number
+  client: Client
+  supplier: Client
+  items: Item[]
+  total: number
+  paid: bool
+  paidOn: string
+
+// A line being edited: the fields' text, parsed on save.
+shape DraftItem
+  key: number
+  description: string
+  quantity: string
+  price: string
+
+shape Time
+  epochAtZero: number
+  utcOffset: number
+
+fn blankItem(key: number): DraftItem = DraftItem(key=key, description="", quantity="1", price="")
+
+// "1 500,50" or "1500.5" → 1500.5; -1 when it isn't a number.
+fn amount(s: string): number = match parseNumber(s.trim().replaceAll(" ", "").replaceAll(",", ".")) { case some(n) => n, case none => -1 }
+
+fn twoDigits(n: number): string = n < 10 ? `0${n}` : `${n}`
+
+// 150050 hellers → "1 500,50 Kč".
+fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(hellers) % 100)} Kč`
+
+// A price field's text for a saved price: "1500" or "1500,50".
+fn priceText(hellers: number): string = hellers % 100 == 0 ? `${hellers / 100}` : formatDecimal(hellers, 2).replaceAll(".", ",")
+
+fn itemFilled(d: DraftItem): bool = d.description.trim() != "" or d.price.trim() != ""
+
+fn itemValid(d: DraftItem): bool = d.description.trim() != "" and amount(d.quantity) > 0 and amount(d.price) >= 0
+
+fn itemHellers(d: DraftItem): number = itemValid(d) ? round(amount(d.quantity) * round(amount(d.price) * 100)) : 0
+
+fn draftTotal(ds: DraftItem[]): number = sum(ds.map(d => itemHellers(d)))
+
+fn toItem(d: DraftItem): Item = Item(description=d.description.trim(), quantity=amount(d.quantity), unitPrice=round(amount(d.price) * 100))
+
+fn toDraft(i: Item, key: number): DraftItem = DraftItem(key=key, description=i.description, quantity=`${i.quantity}`, price=priceText(i.unitPrice))
+
+// "2026-11-25" → "25. 11. 2026".
+fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. ${amount(iso.slice(5, 7))}. ${iso.slice(0, 4)}`
+
+fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
+
+fn invoiceOf(xs: Invoice[], id: string): Invoice = match first(xs.filter(x => x.id == id)) { case some(x) => x, case none => Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="") }
+
+fn invoiceFound(xs: Invoice[], id: string): bool = xs.filter(x => x.id == id).length > 0
+
+// "IČO 28888286 · DIČ CZ28888286", leaving out what's empty.
+fn idLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.dic == "" ? "" : `DIČ ${c.dic}`].filter(p => p != "").join(" · ")

@@ -2,7 +2,15 @@ import type { Answer, Result, Sources, Storage } from './app.contract.d.ts';
 
 // ARES, the Czech register of economic subjects (https://ares.gov.cz).
 const ARES = 'https://ares.gov.cz';
-export const grants = [`net.fetch ${ARES}`, 'fs.read app:/data/clients.json', 'fs.write app:/data/clients.json'].join('\n');
+const CLIENTS = 'app:/data/clients.json';
+const INVOICES = 'app:/data/invoices.json';
+export const grants = [
+  `net.fetch ${ARES}`,
+  `fs.read ${CLIENTS}`,
+  `fs.write ${CLIENTS}`,
+  `fs.read ${INVOICES}`,
+  `fs.write ${INVOICES}`,
+].join('\n');
 
 type Company = Result<'lookupIco'>;
 
@@ -77,48 +85,89 @@ async function lookupIco(ico: string): Promise<Company> {
   };
 }
 
-// Clients live in a file of the app's own; memory holds them between requests.
-const CLIENTS = 'app:/data/clients.json';
+// A list kept in a file of the app's own; memory holds it between requests.
+function store<T>(file: string) {
+  let items: T[] | null = null;
+  return {
+    async load(storage: Storage): Promise<T[]> {
+      if (!items) {
+        items = await storage.fs.readFile(file).then(
+          (bytes) => JSON.parse(new TextDecoder().decode(bytes)) as T[],
+          (e) => {
+            if (e.code === 'ENOENT') return []; // no file yet
+            throw e;
+          },
+        );
+      }
+      return items;
+    },
+    async save(storage: Storage, next: T[]): Promise<{ ok: boolean; error: string }> {
+      items = next;
+      await storage.fs.atomicWriteFile(file, new TextEncoder().encode(JSON.stringify(next)));
+      return { ok: true, error: '' };
+    },
+  };
+}
+
+const nextId = (xs: { id: string }[]): string => String(Math.max(0, ...xs.map((x) => Number(x.id))) + 1);
+
 type Client = Result<'loadClients'>[number];
-let clients: Client[] | null = null;
-
-async function loadClients(storage: Storage): Promise<Client[]> {
-  if (!clients) {
-    clients = await storage.fs.readFile(CLIENTS).then(
-      (bytes) => JSON.parse(new TextDecoder().decode(bytes)) as Client[],
-      (e) => {
-        if (e.code === 'ENOENT') return []; // no file yet
-        throw e;
-      },
-    );
-  }
-  return clients;
-}
-
-async function saveClients(storage: Storage, next: Client[]): Promise<Result<'saveClient'>> {
-  clients = next;
-  await storage.fs.atomicWriteFile(CLIENTS, new TextEncoder().encode(JSON.stringify(next)));
-  return { ok: true, error: '' };
-}
+type Invoice = Result<'loadInvoices'>[number];
+const clients = store<Client>(CLIENTS);
+const invoices = store<Invoice>(INVOICES);
 
 const byName = (a: Client, b: Client): number => a.name.localeCompare(b.name, 'cs');
 
+// "2026-11-11" plus 14 days → "2026-11-25", by the calendar (UTC, so no DST shift).
+function addDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// Fakturoid's numbering: the issue year and a sequence per year, "2026-0001".
+function nextNumber(all: Invoice[], issued: string): string {
+  const year = issued.slice(0, 4);
+  const used = all.filter((i) => i.number.startsWith(`${year}-`)).map((i) => Number(i.number.slice(5)));
+  return `${year}-${String(Math.max(0, ...used) + 1).padStart(4, '0')}`;
+}
+
 const sources: Sources = {
   lookupIco: ([ico]) => lookupIco(ico),
-  loadClients: async (_args, _store, storage) => [...(await loadClients(storage))].sort(byName),
+
+  loadClients: async (_args, _store, storage) => [...(await clients.load(storage))].sort(byName),
   saveClient: async ([id, name, ico, dic, street, city, zip, email], _store, storage) => {
-    const all = await loadClients(storage);
+    const all = await clients.load(storage);
     const twin = ico === '' ? undefined : all.find((c) => c.ico === ico && c.id !== id);
     if (twin) return { ok: false, error: `${twin.name} already has this IČO.` };
     const fields = { name, ico, dic, street, city, zip, email };
-    if (id === '') {
-      const next = String(Math.max(0, ...all.map((c) => Number(c.id))) + 1);
-      return saveClients(storage, [...all, { id: next, ...fields }]);
-    }
-    return saveClients(storage, all.map((c) => (c.id === id ? { id, ...fields } : c)));
+    if (id === '') return clients.save(storage, [...all, { id: nextId(all), ...fields }]);
+    return clients.save(storage, all.map((c) => (c.id === id ? { id, ...fields } : c)));
   },
   removeClient: async ([id], _store, storage) =>
-    saveClients(storage, (await loadClients(storage)).filter((c) => c.id !== id)),
+    clients.save(storage, (await clients.load(storage)).filter((c) => c.id !== id)),
+
+  // Newest first: by issue date, then by number.
+  loadInvoices: async (_args, _store, storage) =>
+    [...(await invoices.load(storage))].sort(
+      (a, b) => b.issued.localeCompare(a.issued) || b.number.localeCompare(a.number),
+    ),
+  saveInvoice: async ([id, client, supplier, issued, dueDays, items], _store, storage) => {
+    const all = await invoices.load(storage);
+    const total = items.reduce((sum, i) => sum + Math.round(i.quantity * i.unitPrice), 0);
+    const fields = { client, supplier, issued, dueDays, due: addDays(issued, dueDays), items, total };
+    if (id === '') {
+      const fresh: Invoice = { id: nextId(all), number: nextNumber(all, issued), paid: false, paidOn: '', ...fields };
+      return invoices.save(storage, [...all, fresh]);
+    }
+    return invoices.save(storage, all.map((i) => (i.id === id ? { ...i, ...fields } : i)));
+  },
+  setInvoicePaid: async ([id, paid, day], _store, storage) =>
+    invoices.save(
+      storage,
+      (await invoices.load(storage)).map((i) => (i.id === id ? { ...i, paid, paidOn: paid ? day : '' } : i)),
+    ),
+  removeInvoice: async ([id], _store, storage) =>
+    invoices.save(storage, (await invoices.load(storage)).filter((i) => i.id !== id)),
 };
 export const answer: Answer = (source, args, store, storage, native) =>
   sources[source](args, store, storage, native);
