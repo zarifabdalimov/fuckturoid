@@ -25,8 +25,6 @@ component Details
     editStreet: action
     editCity: action
     editZip: action
-    addBankAccount: action
-    removeBankAccount: action
   view
     column navigationKey=`${route}` navigationScroll="form" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -61,17 +59,11 @@ component Details
           footer
             text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
         section
-          header
-            text "Bank accounts"
-          for entry in bankAccounts key=entry.id
-            link href=path("editBankAccount", entry.id) delete=removeBankAccount(entry.id) testId=`bank-${entry.id}`
-              text entry.account flex=1 min-width=0
-              text entry.currency color="-exact-secondary-label"
-              image "symbol:forward-chevron"
-          button press=addBankAccount testId="add-bank-account"
-            text "Add Bank Account"
-          footer
-            text "Clients pay into the account in their invoice's currency. Each goes on the invoice with its IBAN."
+          link href=path("bankAccounts") testId="open-bank-accounts"
+            text "Bank accounts" flex=1
+            text (bankAccounts.length == 0 ? "None yet" : bankAccounts.length == 1 ? "1 account" : `${bankAccounts.length} accounts`)
+              color="-exact-secondary-label" testId="bank-accounts-count"
+            image "symbol:forward-chevron"
         if onboarded
           section
             button press=logout destructive=true testId="logout"

@@ -6,11 +6,12 @@ use Details from "./src/screens/details.contract"
 use ClientList, ClientDetail, ClientForm from "./src/screens/clients.contract"
 use Confirm from "./src/screens/confirm.contract"
 use TabBar from "./src/screens/tab-bar.contract"
-use BankAccountForm from "./src/screens/bank-account.contract"
+use BankAccountForm, BankAccountList from "./src/screens/bank-account.contract"
 
 routes nav
   tab invoices "/"
     details "/details"
+    bankAccounts "/bank-accounts"
     newBankAccount "/new-bank-account"
     editBankAccount "/bank-accounts/:id"
     invoice "/invoices/:id"
@@ -265,8 +266,10 @@ component App
                   ico=ico, name=name, dic=dic, street=street, city=city, zip=zip, bankAccounts=bankAccounts,
                   ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
                   finish=finish, logout=askLogout, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
-                  editStreet=editStreet, editCity=editCity, editZip=editZip,
-                  addBankAccount=openAddBankAccount, removeBankAccount=removeBankAccount)
+                  editStreet=editStreet, editCity=editCity, editZip=editZip)
+              if entry.name == "bankAccounts"
+                BankAccountList(route=entry.id, bankAccounts=bankAccounts, loading=pending(bankAccounts),
+                  add=openAddBankAccount, remove=removeBankAccount)
               if entry.name == "newBankAccount"
                 BankAccountForm(route=entry.id, isNew=true, entry=BankAccount(id="", account="", currency="CZK"),
                   saving=pending(bankAccountSaved), cancel=back, save=saveBankAccount(""), remove=back)

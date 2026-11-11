@@ -1,3 +1,4 @@
+use EmptyState from "exact:content"
 use BankAccount, accountProblem from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
 
@@ -50,3 +51,32 @@ component BankAccountForm
           section
             button press=remove destructive=true testId="bank-delete"
               text "Delete Bank Account"
+
+component BankAccountList
+  props
+    route: number
+    bankAccounts: BankAccount[]
+    loading: bool
+    add: action
+    remove: action
+  view
+    column navigationKey=`${route}` navigationScroll="bank-accounts-list" position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" align-items="center"
+        text "Bank Accounts" role="heading" aria-level=2 flex=1
+        button press=add aria-label="Add Bank Account" testId="add-bank-account"
+          image "symbol:add"
+      if bankAccounts.length == 0 and not loading
+        EmptyState(symbol="symbol:icon.bank", title="No bank accounts yet", message="Add the accounts clients pay into, one for each currency you invoice in.")
+          button press=add testId="empty-add-bank-account"
+            text "Add Bank Account"
+      else
+        list id="bank-accounts-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+          section
+            for entry in bankAccounts key=entry.id
+              link href=path("editBankAccount", entry.id) delete=remove(entry.id) testId=`bank-${entry.id}`
+                text entry.account flex=1 min-width=0
+                text entry.currency color="-exact-secondary-label"
+                image "symbol:forward-chevron"
+            footer
+              text "Clients pay into the account in their invoice's currency. Each goes on the invoice with its IBAN."
