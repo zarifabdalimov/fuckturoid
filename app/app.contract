@@ -57,6 +57,7 @@ component App
   mutation invoiceSaved as shape Reply refreshes invoices then afterInvoiceSave
   mutation invoicePaidSaved as shape Reply refreshes invoices
   mutation invoiceRemoved as shape Reply refreshes invoices
+  mutation erased as shape Reply refreshes clients, invoices
   derive iTotal = draftTotal(iItems)
   derive iLines = iItems.filter(d => itemFilled(d))
   // Why Save is disabled (not red: nothing is wrong yet).
@@ -279,6 +280,22 @@ component App
     if top(nav).name == "invoice" and top(nav).params.id == id
       nav = back(nav)
 
+  // Log out: erase everything and start again at the landing screen.
+  action askLogout
+    showModal("logout")
+  action logout
+    send erased = eraseAll()
+    onboarded = false
+    ico = ""
+    name = ""
+    dic = ""
+    street = ""
+    city = ""
+    zip = ""
+    query = ""
+    // Log Out is on Your details, over the Invoices tab: back is its landing screen.
+    nav = back(nav)
+
   view
     main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
       display="flex" flex-direction="column"
@@ -297,7 +314,7 @@ component App
                 Details(route=e.id, onboarded=onboarded, canFinish=canFinish,
                   ico=ico, name=name, dic=dic, street=street, city=city, zip=zip,
                   icoHint=icoHint, icoRed=icoRed, lookingUp=pending(looked),
-                  finish=finish, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
+                  finish=finish, logout=askLogout, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
                   editStreet=editStreet, editCity=editCity, editZip=editZip)
               if e.name == "invoice"
                 InvoiceDetail(route=e.id, id=e.params.id, invoices=invoices, today=today, loading=pending(invoices),
@@ -324,22 +341,28 @@ component App
                   cancel=back, save=saveClient, editIco=editCIco, lookup=lookupClient, editName=editCName,
                   editDic=editCDic, editStreet=editCStreet, editCity=editCCity, editZip=editCZip, editEmail=editCEmail)
 
-      if onboarded
-        row role="tablist" testId="tabs"
-          button role="tab" aria-controls="panel-invoices" aria-selected=(nav.tab == "invoices") press=pick("invoices")
-            testId="tab-invoices" flex=1
-            image "symbol:document"
-            text "Invoices"
-          button role="tab" aria-controls="panel-clients" aria-selected=(nav.tab == "clients") press=pick("clients")
-            testId="tab-clients" flex=1
-            image "symbol:people"
-            text "Clients"
+      // Always present (without it the root has no tabs); hidden until onboarding is done.
+      row role="tablist" display=(onboarded ? "flex" : "none") testId="tabs"
+        button role="tab" aria-controls="panel-invoices" aria-selected=(nav.tab == "invoices") press=pick("invoices")
+          testId="tab-invoices" flex=1
+          image "symbol:document"
+          text "Invoices"
+        button role="tab" aria-controls="panel-clients" aria-selected=(nav.tab == "clients") press=pick("clients")
+          testId="tab-clients" flex=1
+          image "symbol:people"
+          text "Clients"
 
       dialog id="remove-client" role="alertdialog" aria-label=`Delete ${aimedName}?`
         text "Their details will be gone. This can't be undone."
         button press=removeClient(aimed) destructive=true commandfor="remove-client" command="close" testId="remove-client-confirm"
           text "Delete"
         button commandfor="remove-client" command="close" testId="remove-client-cancel"
+          text "Cancel"
+      dialog id="logout" role="alertdialog" aria-label="Log out?"
+        text "Your details, clients and invoices will be erased from this phone. This can't be undone."
+        button press=logout destructive=true commandfor="logout" command="close" testId="logout-confirm"
+          text "Log Out"
+        button commandfor="logout" command="close" testId="logout-cancel"
           text "Cancel"
       dialog id="remove-invoice" role="alertdialog" aria-label=`Delete invoice ${aimedInvoiceNumber}?`
         text "It will be gone for good. This can't be undone."

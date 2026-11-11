@@ -127,3 +127,21 @@ test "a client is added by IČO, refused twice, edited and deleted"
   clock data
   clock settle
   expect tree has "empty-add-client"
+
+test "Log Out asks, erases everything and returns to the landing screen"
+  tap "get-started"
+  clock settle
+  type "name" "Jan Novák"
+  tap "finish"
+  clock settle
+  tap "open-details"
+  clock settle
+  tap "logout"
+  clock settle
+  tap "logout-confirm"
+  clock data
+  clock settle
+  expect tree has "welcome"
+  tap "get-started"
+  clock settle
+  expect text "name" == ""

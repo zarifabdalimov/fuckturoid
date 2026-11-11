@@ -17,6 +17,7 @@ component Details
     icoRed: bool
     lookingUp: bool
     finish: action
+    logout: action
     editIco: action
     lookup: action
     editName: action
@@ -56,3 +57,9 @@ component Details
               autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
           footer
             text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
+        if onboarded
+          section
+            button press=logout destructive=true testId="logout"
+              text "Log Out"
+            footer
+              text "Erases your details, clients and invoices from this phone."

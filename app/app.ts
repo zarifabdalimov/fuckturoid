@@ -168,6 +168,12 @@ const sources: Sources = {
     ),
   removeInvoice: async ([id], _store, storage) =>
     invoices.save(storage, (await invoices.load(storage)).filter((i) => i.id !== id)),
+
+  // Log out: every client and invoice on this phone is gone.
+  eraseAll: async (_args, _store, storage) => {
+    await clients.save(storage, []);
+    return invoices.save(storage, []);
+  },
 };
 export const answer: Answer = (source, args, store, storage, native) =>
   sources[source](args, store, storage, native);
