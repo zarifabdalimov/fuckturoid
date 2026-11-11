@@ -1,3 +1,6 @@
+import { czDate } from '../../utils/format.ts';
+import type { Labels } from './types.ts';
+
 export const EXTRA = ['č', 'Č', 'ě', 'Ě', 'ř', 'Ř', 'ů', 'Ů', 'ď', 'Ď', 'ť', 'Ť', 'ň', 'Ň'];
 // prettier-ignore
 export const EXTRA_NAMES = ['ccaron', 'Ccaron', 'ecaron', 'Ecaron', 'rcaron', 'Rcaron', 'uring', 'Uring',
@@ -45,3 +48,65 @@ export const COL_QTY = 340;
 export const COL_PRICE = 440;
 export const COL_AMOUNT = RIGHT;
 export const DESC_W = COL_QTY - 50 - MARGIN;
+
+const ENGLISH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function englishDate(iso: string): string {
+  const [year, month, day] = iso.split('-');
+  return `${Number(day)} ${ENGLISH_MONTHS[Number(month) - 1]} ${year}`;
+}
+
+export const LABELS: Record<string, Labels> = {
+  cs: {
+    title: 'Faktura',
+    supplier: 'Dodavatel',
+    client: 'Odběratel',
+    issued: 'Datum vystavení',
+    due: 'Datum splatnosti',
+    variableSymbol: 'Variabilní symbol',
+    paymentMethod: 'Způsob platby',
+    bankTransfer: 'Převodem',
+    description: 'Popis',
+    quantity: 'Množství',
+    unitPrice: 'Cena za kus',
+    amount: 'Celkem',
+    total: 'Celkem k úhradě',
+    notVatPayer: 'Dodavatel není plátcem DPH.',
+    page: (current, count) => `Strana ${current} z ${count}`,
+    date: czDate,
+    idNumber: 'IČO',
+    vatNumber: 'DIČ',
+    payment: 'Platební údaje',
+    account: 'Číslo účtu',
+    bank: 'Banka',
+    iban: 'IBAN',
+    bic: 'SWIFT / BIC',
+    amountDue: 'Částka',
+  },
+  en: {
+    title: 'Invoice',
+    supplier: 'Supplier',
+    client: 'Bill to',
+    issued: 'Issue date',
+    due: 'Due date',
+    variableSymbol: 'Variable symbol',
+    paymentMethod: 'Payment method',
+    bankTransfer: 'Bank transfer',
+    description: 'Description',
+    quantity: 'Qty',
+    unitPrice: 'Unit price',
+    amount: 'Amount',
+    total: 'Total due',
+    notVatPayer: 'The supplier is not registered for VAT.',
+    page: (current, count) => `Page ${current} of ${count}`,
+    date: englishDate,
+    idNumber: 'Company ID',
+    vatNumber: 'VAT ID',
+    payment: 'Payment details',
+    account: 'Account number',
+    bank: 'Bank',
+    iban: 'IBAN',
+    bic: 'SWIFT / BIC',
+    amountDue: 'Amount',
+  },
+};

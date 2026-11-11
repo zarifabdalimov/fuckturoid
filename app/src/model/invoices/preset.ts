@@ -1,5 +1,6 @@
 export const NUMBER_DIGITS = 4;
-export const PDF_PREFIX = 'Faktura';
+export const PDF_PREFIX: Record<string, string> = { cs: 'Faktura', en: 'Invoice' };
+export const LANGUAGES = ['cs', 'en'];
 export const MISSING = 'This invoice no longer exists.';
 export const MONTH_NAMES = [
   [

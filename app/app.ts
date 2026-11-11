@@ -8,7 +8,7 @@ import {
 } from './src/model/clients/index.ts';
 import {
   type BankAccount,
-  czechIban,
+  bankDetails,
   putBankAccount,
   removeBankAccount,
   sortBankAccounts,
@@ -16,7 +16,7 @@ import {
 import {
   duplicateInvoice,
   findInvoice,
-  type Invoice,
+  type StoredInvoice,
   pdfFileName,
   putInvoice,
   removeInvoice,
@@ -46,7 +46,7 @@ export const grants = [
 ].join('\n');
 
 const clients = store<Client>(CLIENTS);
-const invoices = store<Invoice>(INVOICES);
+const invoices = store<StoredInvoice>(INVOICES);
 const bankAccounts = store<BankAccount>(BANK_ACCOUNTS);
 
 const sources: Sources = {
@@ -60,10 +60,19 @@ const sources: Sources = {
   removeClient: async ([id], _store, storage) => clients.save(storage, removeClient(await clients.load(storage), id)),
 
   loadInvoices: async (_args, _store, storage) => sortInvoices(withDefaults(await invoices.load(storage))),
-  saveInvoice: async ([id, client, supplier, issued, dueDays, items, account, currency], _store, storage) =>
+  saveInvoice: async ([id, client, supplier, issued, dueDays, items, account, currency, language], _store, storage) =>
     invoices.save(
       storage,
-      putInvoice(await invoices.load(storage), id, { client, supplier, issued, dueDays, items, account, currency }),
+      putInvoice(await invoices.load(storage), id, {
+        client,
+        supplier,
+        issued,
+        dueDays,
+        items,
+        account,
+        currency,
+        language,
+      }),
     ),
   duplicateInvoice: async ([id, today, supplier, account], _store, storage) => {
     const duplicated = duplicateInvoice(await invoices.load(storage), id, today, supplier, account);
@@ -83,7 +92,7 @@ const sources: Sources = {
       storage,
       PDFS,
       pdfFileName(found.invoice),
-      invoicePdf({ ...found.invoice, iban: czechIban(found.invoice.account ?? '') }),
+      invoicePdf({ ...found.invoice, ...bankDetails(found.invoice.account ?? '') }),
     );
     return { ok: true, error: '', path };
   },

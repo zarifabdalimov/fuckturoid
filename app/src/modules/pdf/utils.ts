@@ -12,7 +12,7 @@ import {
   RIGHT,
   WINANSI,
 } from './preset.ts';
-import type { Font, Party } from './types.ts';
+import type { Font, Labels, Party } from './types.ts';
 
 export function width(text: string, font: Font, size: number): number {
   const table = font === 'F2' ? BOLD : REGULAR;
@@ -78,7 +78,15 @@ export class Page {
   }
 }
 
-export function party(page: Page, caption: string, who: Party, left: number, top: number, columnWidth: number): number {
+export function party(
+  page: Page,
+  labels: Labels,
+  caption: string,
+  who: Party,
+  left: number,
+  top: number,
+  columnWidth: number,
+): number {
   page.text(caption.toUpperCase(), left, top, 'F2', 8, 0.45);
   let baseline = top - 16;
   for (const line of wrap(who.name, 'F2', 11, columnWidth)) {
@@ -89,8 +97,8 @@ export function party(page: Page, caption: string, who: Party, left: number, top
     [
       who.street,
       R.join(R.filter([who.zip, who.city], R.isTruthy), ' '),
-      who.ico ? `IČO: ${who.ico}` : '',
-      who.dic ? `DIČ: ${who.dic}` : '',
+      who.ico ? `${labels.idNumber}: ${who.ico}` : '',
+      who.dic ? `${labels.vatNumber}: ${who.dic}` : '',
     ],
     R.isTruthy,
   );
@@ -101,11 +109,11 @@ export function party(page: Page, caption: string, who: Party, left: number, top
   return baseline;
 }
 
-export function tableHeader(page: Page, baseline: number): number {
+export function tableHeader(page: Page, labels: Labels, baseline: number): number {
   page.box(MARGIN, baseline - 6, RIGHT - MARGIN, 20, 0.94);
-  page.text('Popis', MARGIN + 8, baseline, 'F2', 9, 0.3);
-  page.textRight('Množství', COL_QTY, baseline, 'F2', 9, 0.3);
-  page.textRight('Cena za kus', COL_PRICE, baseline, 'F2', 9, 0.3);
-  page.textRight('Celkem', COL_AMOUNT - 8, baseline, 'F2', 9, 0.3);
+  page.text(labels.description, MARGIN + 8, baseline, 'F2', 9, 0.3);
+  page.textRight(labels.quantity, COL_QTY, baseline, 'F2', 9, 0.3);
+  page.textRight(labels.unitPrice, COL_PRICE, baseline, 'F2', 9, 0.3);
+  page.textRight(labels.amount, COL_AMOUNT - 8, baseline, 'F2', 9, 0.3);
   return baseline - 24;
 }

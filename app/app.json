@@ -17,7 +17,8 @@
         "iphone",
         "ipad"
       ]
-    }
+    },
+    "android": {}
   },
   "deploy": {
     "store": {

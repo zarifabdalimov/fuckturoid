@@ -72,6 +72,10 @@ shape Invoice
   paidOn: string
   account: string
   currency: string
+  language: string
+  iban: string
+  bic: string
+  bankName: string
 
 shape DraftItem
   key: number
@@ -118,9 +122,13 @@ fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. 
 
 fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
 
-fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="", account="", currency="CZK")
+fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="", account="", currency="CZK", language="cs", iban="", bic="", bankName="")
 
 fn invoiceOf(invoices: Invoice[], id: string): Invoice = match first(invoices.filter(invoice => invoice.id == id)) { case some(invoice) => invoice, case none => noInvoice() }
+
+fn variableSymbol(number: string): string = number.split("").filter(char => "0123456789".includes(char)).join("")
+
+fn languageName(language: string): string = language == "en" ? "English" : "Čeština"
 
 fn invoiceFound(invoices: Invoice[], id: string): bool = invoices.filter(invoice => invoice.id == id).length > 0
 

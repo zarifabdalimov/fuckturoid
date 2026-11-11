@@ -1,61 +1,85 @@
 import * as R from 'remeda';
-import { czDate, money } from '../../utils/format.ts';
-import { COL_AMOUNT, COL_PRICE, COL_QTY, DESC_W, EXTRA_NAMES, MARGIN, PAGE_H, PAGE_W, RIGHT } from './preset.ts';
-import type { InvoiceForPdf } from './types.ts';
+import { money } from '../../utils/format.ts';
+import {
+  COL_AMOUNT,
+  COL_PRICE,
+  COL_QTY,
+  DESC_W,
+  EXTRA_NAMES,
+  LABELS,
+  MARGIN,
+  PAGE_H,
+  PAGE_W,
+  RIGHT,
+} from './preset.ts';
+import type { InvoiceForPdf, Labels } from './types.ts';
 import { literal, Page, party, quantity, tableHeader, wrap } from './utils.ts';
 
 export type { InvoiceForPdf, Party } from './types.ts';
 
+function paymentBlock(page: Page, labels: Labels, inv: InvoiceForPdf, top: number, currency: string): number {
+  const candidates: [string, string][] = [
+    [labels.account, inv.account ?? ''],
+    [labels.bank, inv.bankName ?? ''],
+    [labels.iban, inv.iban ?? ''],
+    [labels.bic, inv.bic ?? ''],
+    [labels.variableSymbol, inv.number.replace(/\D/g, '')],
+    [labels.amountDue, money(inv.total, currency)],
+  ];
+  const rows = R.filter(candidates, ([, value]) => value !== '');
+  const blockHeight = 30 + rows.length * 16;
+  const blockWidth = (RIGHT - MARGIN) / 2 + 40;
+  page.box(MARGIN, top - blockHeight + 12, blockWidth, blockHeight, 0.96);
+  page.text(labels.payment.toUpperCase(), MARGIN + 10, top - 4, 'F2', 8, 0.45);
+  R.forEach(rows, ([label, value], index) => {
+    const baseline = top - 24 - index * 16;
+    page.text(label, MARGIN + 10, baseline, 'F1', 9, 0.45);
+    page.text(value, MARGIN + 110, baseline, 'F2', 10);
+  });
+  return top - blockHeight - 8;
+}
+
 function pages(inv: InvoiceForPdf): Page[] {
+  const labels = LABELS[inv.language ?? 'cs'] ?? LABELS.cs;
   const all: Page[] = [];
   let page = new Page();
   all.push(page);
 
   let baseline = PAGE_H - MARGIN - 14;
-  page.text('Faktura', MARGIN, baseline, 'F2', 24);
+  page.text(labels.title, MARGIN, baseline, 'F2', 24);
   page.textRight(inv.number, RIGHT, baseline, 'F2', 16, 0.35);
   baseline -= 44;
 
   const half = (RIGHT - MARGIN) / 2;
-  const left = party(page, 'Dodavatel', inv.supplier, MARGIN, baseline, half - 20);
-  const right = party(page, 'Odběratel', inv.client, MARGIN + half + 10, baseline, half - 20);
+  const left = party(page, labels, labels.supplier, inv.supplier, MARGIN, baseline, half - 20);
+  const right = party(page, labels, labels.client, inv.client, MARGIN + half + 10, baseline, half - 20);
   baseline = Math.min(left, right) - 14;
 
   const account = inv.account ?? '';
   const currency = inv.currency ?? 'CZK';
-  const iban = inv.iban ?? '';
-  const bandHeight = iban ? 66 : 50;
+  const bandHeight = 50;
   page.box(MARGIN, baseline - bandHeight + 12, RIGHT - MARGIN, bandHeight, 0.96);
-  const variableSymbol = inv.number.replace(/\D/g, '');
-  const facts: [string, string][] = account
-    ? [
-        ['Datum vystavení', czDate(inv.issued)],
-        ['Datum splatnosti', czDate(inv.due)],
-        ['Číslo účtu', account],
-        ['Variabilní symbol', variableSymbol],
-      ]
-    : [
-        ['Datum vystavení', czDate(inv.issued)],
-        ['Datum splatnosti', czDate(inv.due)],
-        ['Variabilní symbol', variableSymbol],
-        ['Způsob platby', 'Převodem'],
-      ];
+  const facts: [string, string][] = [
+    [labels.issued, labels.date(inv.issued)],
+    [labels.due, labels.date(inv.due)],
+    [labels.variableSymbol, inv.number.replace(/\D/g, '')],
+    [labels.paymentMethod, labels.bankTransfer],
+  ];
   const step = (RIGHT - MARGIN) / facts.length;
   R.forEach(facts, ([label, value], index) => {
     page.text(label, MARGIN + 10 + index * step, baseline - 4, 'F1', 8, 0.45);
     page.text(value, MARGIN + 10 + index * step, baseline - 22, 'F2', 11);
   });
-  if (iban) page.text(`IBAN ${iban}`, MARGIN + 10 + 2 * step, baseline - 38, 'F1', 8, 0.45);
   baseline -= bandHeight + 20;
 
-  baseline = tableHeader(page, baseline);
+  baseline = tableHeader(page, labels, baseline);
   for (const item of inv.items) {
     const lines = wrap(item.description, 'F1', 10, DESC_W);
     const height = (lines.length - 1) * 13 + 23;
     if (baseline - height < MARGIN + 90) {
       page = new Page();
       all.push(page);
-      baseline = tableHeader(page, PAGE_H - MARGIN - 14);
+      baseline = tableHeader(page, labels, PAGE_H - MARGIN - 14);
     }
     R.forEach(lines, (line, index) => page.text(line, MARGIN + 8, baseline - index * 13, 'F1', 10));
     page.textRight(quantity(item.quantity), COL_QTY, baseline, 'F1', 10);
@@ -66,14 +90,23 @@ function pages(inv: InvoiceForPdf): Page[] {
   }
 
   baseline -= 18;
-  page.text('Celkem k úhradě', COL_PRICE - 120, baseline, 'F2', 12);
+  page.text(labels.total, COL_PRICE - 120, baseline, 'F2', 12);
   page.textRight(money(inv.total, currency), COL_AMOUNT - 8, baseline, 'F2', 16);
-  baseline -= 30;
-  if (!inv.supplier.dic) page.text('Dodavatel není plátcem DPH.', MARGIN, baseline, 'F1', 9, 0.45);
+  baseline -= 36;
+
+  if (account) {
+    if (baseline - 140 < MARGIN) {
+      page = new Page();
+      all.push(page);
+      baseline = PAGE_H - MARGIN - 14;
+    }
+    baseline = paymentBlock(page, labels, inv, baseline, currency);
+  }
+  if (!inv.supplier.dic) page.text(labels.notVatPayer, MARGIN, baseline - 6, 'F1', 9, 0.45);
 
   if (all.length > 1) {
     R.forEach(all, (each, index) =>
-      each.textRight(`Strana ${index + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5),
+      each.textRight(labels.page(index + 1, all.length), RIGHT, MARGIN - 20, 'F1', 8, 0.5),
     );
   }
   return all;
@@ -110,7 +143,9 @@ export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
     R.map(kids, (kid) => `${kid} 0 R`),
     ' ',
   )}] /Count ${kids.length} >>`;
-  const info = add(`<< /Title ${literal(`Faktura ${inv.number}`)} /Producer (F*ckturoid) >>`);
+  const info = add(
+    `<< /Title ${literal(`${(LABELS[inv.language ?? 'cs'] ?? LABELS.cs).title} ${inv.number}`)} /Producer (F*ckturoid) >>`,
+  );
 
   let file = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';
   const offsets: number[] = [];

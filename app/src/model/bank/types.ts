@@ -7,3 +7,9 @@ export type CzechAccount = {
 };
 
 export type BankAccount = Result<'loadBankAccounts'>[number];
+
+export type BankDetails = {
+  iban: string;
+  bic: string;
+  bankName: string;
+};

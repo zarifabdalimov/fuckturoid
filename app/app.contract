@@ -133,9 +133,9 @@ component App
     nav = push(nav, "/new-invoice")
   action openEditInvoice(id: string)
     nav = push(nav, path("editInvoice", id))
-  action saveInvoice(id: string, clientId: string, issued: string, dueDays: number, items: Item[], currency: string)
+  action saveInvoice(id: string, clientId: string, issued: string, dueDays: number, items: Item[], currency: string, language: string)
     if not pending(invoiceSaved)
-      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email="", currency=currency), issued, dueDays, items, accountFor(bankAccounts, currency), currency)
+      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email="", currency=currency), issued, dueDays, items, accountFor(bankAccounts, currency), currency, language)
   action afterInvoiceSave
     if match invoiceSaved { case some(answer) => answer.ok, case none => false }
       if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
@@ -145,7 +145,7 @@ component App
       send pdfMade = makeInvoicePdf(id)
   action afterPdf
     if pdfPath != ""
-      share(title=`Faktura ${invoiceOf(invoices, top(nav).params.id).number}`, files=[pdfPath])
+      share(title=`${invoiceOf(invoices, top(nav).params.id).language == "en" ? "Invoice" : "Faktura"} ${invoiceOf(invoices, top(nav).params.id).number}`, files=[pdfPath])
   action duplicate(id: string)
     if not pending(invoiceDuplicated)
       send invoiceDuplicated = duplicateInvoice(id, formatDate(time.epochAtZero + performanceNow(), time.utcOffset, "iso"), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email="", currency=invoiceOf(invoices, id).currency), accountFor(bankAccounts, invoiceOf(invoices, id).currency))

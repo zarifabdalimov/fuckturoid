@@ -1,6 +1,6 @@
 use Badge, EmptyState from "exact:content"
 use BankAccount, Client, Invoice, DraftItem, money, currencySymbol, accountFor, clientOf, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
-use blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount from "../model/model.contract"
+use blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount, variableSymbol, languageName from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
 
 component InvoiceList
@@ -130,10 +130,37 @@ component InvoiceDetail
               row
                 text "Due"
                 text czDate(inv.due) testId="invoice-due"
+              row
+                text "Language"
+                text languageName(inv.language) testId="invoice-language"
+            section
+              header
+                text "Payment"
               if inv.account != ""
                 row
-                  text "Pay to"
+                  text "Account"
                   text inv.account testId="invoice-account"
+                if inv.bankName != ""
+                  row
+                    text "Bank"
+                    text inv.bankName testId="invoice-bank"
+                if inv.iban != ""
+                  row
+                    text "IBAN"
+                    text inv.iban font-variant-numeric="tabular-nums" testId="invoice-iban"
+                if inv.bic != ""
+                  row
+                    text "SWIFT"
+                    text inv.bic testId="invoice-bic"
+              else
+                row
+                  text "Account"
+                  text "None" color="-exact-secondary-label" testId="invoice-account"
+              row
+                text "Variable symbol"
+                text variableSymbol(inv.number) font-variant-numeric="tabular-nums" testId="invoice-vs"
+              footer
+                text (inv.account != "" ? "Printed on the PDF so the client knows where to pay." : `Add a ${inv.currency} bank account in Your details, then edit and save this invoice.`)
             PartySection(title="From", party=inv.supplier, prefix="from")
             section
               button press=duplicate disabled=duplicating testId="duplicate-invoice"
@@ -160,6 +187,7 @@ component InvoiceForm
   state currency = isNew ? (clients.length == 1 ? match clients.at(0) { case some(client) => client.currency, case none => "CZK" } : "CZK") : invoice.currency
   state issued = isNew ? today : invoice.issued
   state dueDays = isNew ? 14 : invoice.dueDays
+  state language = isNew ? (clients.length == 1 ? match clients.at(0) { case some(client) => client.currency == "CZK" ? "cs" : "en", case none => "cs" } : "cs") : invoice.language
   state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((line, position) => toDraft(line, position))
   state nextKey = invoice.items.length + 1
   derive lines = items.filter(draft => itemFilled(draft))
@@ -171,10 +199,13 @@ component InvoiceForm
     clientId = value
     if value != ""
       currency = clientOf(clients, value).currency
+      language = clientOf(clients, value).currency == "CZK" ? "cs" : "en"
   action pickCurrency(value: string)
     currency = value
   action setIssued(value: string)
     issued = value
+  action pickLanguage(value: string)
+    language = value
   action setDueDays(days: number)
     dueDays = days
   action editDesc(index: number, value: string)
@@ -191,7 +222,7 @@ component InvoiceForm
       items = items.filter((draft, position) => position != index)
   action submit
     if saveHint == ""
-      save(clientId, issued, dueDays, lines.map(draft => toItem(draft)), currency)
+      save(clientId, issued, dueDays, lines.map(draft => toItem(draft)), currency, language)
 
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`invoice-form-${route}` position="absolute" inset=0
@@ -229,6 +260,15 @@ component InvoiceForm
                 text `${days} ${days == 1 ? "day" : "days"}`
           footer
             text `Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`
+        section
+          header
+            text "Invoice language"
+          row role="radiogroup" aria-label="Invoice language"
+            for option in ["cs", "en"] key=option
+              button role="radio" aria-checked=(language == option) press=pickLanguage(option) testId=`language-${option}` flex=1
+                text languageName(option)
+          footer
+            text (language == "en" ? "The PDF is in English." : "The PDF is in Czech.")
         for draft, index in items key=draft.key
           section
             header

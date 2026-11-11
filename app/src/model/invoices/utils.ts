@@ -1,13 +1,13 @@
 import * as R from 'remeda';
 import { MONTH_NAMES, NUMBER_DIGITS } from './preset.ts';
-import type { Invoice, Item } from './types.ts';
+import type { Item, StoredInvoice } from './types.ts';
 
 export function addDays(iso: string, days: number): string {
   const [year, month, day] = R.map(iso.split('-'), Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
-export function nextNumber(all: Invoice[], issued: string): string {
+export function nextNumber(all: StoredInvoice[], issued: string): string {
   const year = issued.slice(0, 4);
   const last = R.pipe(
     all,

@@ -92,6 +92,7 @@ for (const plan of plans) {
     paidOn: plan.paidDaysAgo !== undefined ? daysAgo(plan.paidDaysAgo) : '',
     account,
     currency: client.currency,
+    language: client.currency === 'CZK' ? 'cs' : 'en',
   });
 }
 
