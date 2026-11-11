@@ -3,10 +3,19 @@
   "private": true,
   "scripts": {
     "build": "bun exact.mjs web-build --out dist",
-    "start": "bun exact.mjs serve dist"
+    "start": "bun exact.mjs serve dist",
+    "lint": "oxlint app.ts src",
+    "lint:fix": "oxlint --fix app.ts src",
+    "format": "oxfmt app.ts src",
+    "format:check": "oxfmt --check app.ts src",
+    "check": "oxfmt --check app.ts src && oxlint app.ts src"
   },
   "dependencies": {
     "remeda": "^2.59.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0"
   }
 }

@@ -1,6 +1,3 @@
-// The app's data shapes and the pure functions over them.
-
-// An ARES answer for one IČO (app.ts lookupIco).
 shape Company
   ok: bool
   error: string
@@ -21,12 +18,10 @@ shape Client
   zip: string
   email: string
 
-// A write's reply: ok, or the reason it was refused.
 shape Reply
   ok: bool
   error: string
 
-// One digit of an IČO, or -100 for anything else so the checksum fails.
 fn digit(text: string, position: number): number = match parseNumber(text.slice(position, position + 1)) { case some(value) => value, case none => -100 }
 
 fn icoSum(ico: string): number = digit(ico, 0) * 8 + digit(ico, 1) * 7 + digit(ico, 2) * 6 + digit(ico, 3) * 5 + digit(ico, 4) * 4 + digit(ico, 5) * 3 + digit(ico, 6) * 2
@@ -39,17 +34,12 @@ fn icoBad(ico: string): bool = ico != "" and not icoValid(ico)
 
 fn noCompany(): Company = Company(ok=false, error="", ico="", name="", dic="", street="", city="", zip="")
 
-// A lookup's reply, or an empty one before the first lands.
 fn reply(answer: option<Company>): Company = match answer { case some(company) => company, case none => noCompany() }
 
-// A reply counts only for the IČO it answered: an older one, for an IČO since
-// edited, says nothing about the field.
 fn aresFound(ico: string, answer: Company): bool = ico != "" and answer.ico == ico and answer.ok
 
-// What an IČO field says under it, for your details and a client's alike.
 fn icoMessage(ico: string, answer: Company, busy: bool, broke: bool): string = ico == "" ? "" : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : busy ? "Looking it up in ARES…" : broke ? "Couldn't reach ARES. Check your connection and try again." : answer.ico == ico and answer.error != "" ? answer.error : aresFound(ico, answer) ? `Filled in from ARES: ${answer.name}` : ""
 
-// Whether that message is a problem, shown in red.
 fn icoProblem(ico: string, answer: Company, broke: bool): bool = icoBad(ico) or broke or answer.ico == ico and answer.error != ""
 
 fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="")
@@ -60,19 +50,13 @@ fn found(clients: Client[], id: string): bool = clients.filter(client => client.
 
 fn matches(client: Client, query: string): bool = client.name.toLowerCase().includes(query.trim().toLowerCase()) or client.ico.includes(query.trim()) or client.city.toLowerCase().includes(query.trim().toLowerCase())
 
-// "IČO 28888286 · Praha 8", leaving out what's empty.
 fn clientLine(client: Client): string = [client.ico == "" ? "" : `IČO ${client.ico}`, client.city].filter(part => part != "").join(" · ")
 
-// Invoices.
-
-// A line on a saved invoice: price in hellers (1/100 Kč), as all money is kept.
 shape Item
   description: string
   quantity: number
   unitPrice: number
 
-// A saved invoice. Client and supplier are copies made when it was saved, so a
-// later edit of either doesn't rewrite an invoice already sent.
 shape Invoice
   id: string
   number: string
@@ -86,14 +70,12 @@ shape Invoice
   paid: bool
   paidOn: string
 
-// A line being edited: the fields' text, parsed on save.
 shape DraftItem
   key: number
   description: string
   quantity: string
   price: string
 
-// A file the data module made, or why it couldn't.
 shape FileReply
   ok: bool
   error: string
@@ -105,15 +87,12 @@ shape Time
 
 fn blankItem(key: number): DraftItem = DraftItem(key=key, description="", quantity="1", price="")
 
-// "1 500,50" or "1500.5" → 1500.5; -1 when it isn't a number.
 fn amount(text: string): number = match parseNumber(text.trim().replaceAll(" ", "").replaceAll(",", ".")) { case some(value) => value, case none => -1 }
 
 fn twoDigits(value: number): string = value < 10 ? `0${value}` : `${value}`
 
-// 150050 hellers → "1 500,50 Kč". The PDF writes money with src/utils/format.ts's `kc`: keep the two alike.
 fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(hellers) % 100)} Kč`
 
-// A price field's text for a saved price: "1500" or "1500,50".
 fn priceText(hellers: number): string = hellers % 100 == 0 ? `${hellers / 100}` : formatDecimal(hellers, 2).replaceAll(".", ",")
 
 fn itemFilled(draft: DraftItem): bool = draft.description.trim() != "" or draft.price.trim() != ""
@@ -128,7 +107,6 @@ fn toItem(draft: DraftItem): Item = Item(description=draft.description.trim(), q
 
 fn toDraft(item: Item, key: number): DraftItem = DraftItem(key=key, description=item.description, quantity=`${item.quantity}`, price=priceText(item.unitPrice))
 
-// "2026-11-25" → "25. 11. 2026". The PDF uses src/utils/format.ts's `czDate`: keep the two alike.
 fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. ${amount(iso.slice(5, 7))}. ${iso.slice(0, 4)}`
 
 fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
@@ -139,5 +117,4 @@ fn invoiceOf(invoices: Invoice[], id: string): Invoice = match first(invoices.fi
 
 fn invoiceFound(invoices: Invoice[], id: string): bool = invoices.filter(invoice => invoice.id == id).length > 0
 
-// "IČO 28888286 · DIČ CZ28888286", leaving out what's empty.
 fn idLine(client: Client): string = [client.ico == "" ? "" : `IČO ${client.ico}`, client.dic == "" ? "" : `DIČ ${client.dic}`].filter(part => part != "").join(" · ")

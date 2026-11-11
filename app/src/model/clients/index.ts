@@ -1,5 +1,3 @@
-// The rules for clients. Pure functions: a list in, a new list (or a refusal) out.
-
 import * as R from 'remeda';
 import { nextId } from '../../utils/ids.ts';
 import { duplicateIco, SORT_LOCALE } from './preset.ts';
@@ -12,7 +10,6 @@ export function sortClients(all: Client[]): Client[] {
   return R.sort(all, (first, second) => first.name.localeCompare(second.name, SORT_LOCALE));
 }
 
-// Adds a client (id "") or updates one. Two clients can't share an IČO.
 export function putClient(all: Client[], id: string, fields: ClientFields): Change<Client> {
   const holder = icoHolder(all, fields.ico, id);
   if (holder) return { ok: false, error: duplicateIco(holder.name) };

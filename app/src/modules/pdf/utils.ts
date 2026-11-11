@@ -1,9 +1,16 @@
-// Drawing helpers: measuring and encoding text, a page's drawing operators, and
-// the blocks an invoice repeats (a party, the items table's header).
-
 import * as R from 'remeda';
 import {
-  BASE, BOLD, COL_AMOUNT, COL_PRICE, COL_QTY, EXTRA, MARGIN, OTHER_WIDTH, REGULAR, RIGHT, WINANSI,
+  BASE,
+  BOLD,
+  COL_AMOUNT,
+  COL_PRICE,
+  COL_QTY,
+  EXTRA,
+  MARGIN,
+  OTHER_WIDTH,
+  REGULAR,
+  RIGHT,
+  WINANSI,
 } from './preset.ts';
 import type { Font, Party } from './types.ts';
 
@@ -18,7 +25,6 @@ export function width(text: string, font: Font, size: number): number {
   return (units * size) / 1000;
 }
 
-// A string as a PDF literal of single-byte codes.
 export function literal(text: string): string {
   let out = '(';
   for (const char of text) {
@@ -32,12 +38,10 @@ export function literal(text: string): string {
   return `${out})`;
 }
 
-// 2.5 → "2,5", as a Czech quantity is written.
 export function quantity(value: number): string {
   return String(value).replace('.', ',');
 }
 
-// Lines that fit `max` points wide, broken between words.
 export function wrap(text: string, font: Font, size: number, max: number): string[] {
   const lines: string[] = [];
   let line = '';
@@ -52,7 +56,6 @@ export function wrap(text: string, font: Font, size: number, max: number): strin
   return lines.length ? lines : [''];
 }
 
-// One page's drawing operators. Positions are in points from the bottom left.
 export class Page {
   ops: string[] = [];
   text(content: string, left: number, baseline: number, font: Font = 'F1', size = 10, gray = 0): void {
@@ -69,12 +72,12 @@ export class Page {
     );
   }
   box(left: number, bottom: number, boxWidth: number, boxHeight: number, gray: number): void {
-    this.ops.push(`${gray} g ${left.toFixed(2)} ${bottom.toFixed(2)} ${boxWidth.toFixed(2)} ${boxHeight.toFixed(2)} re f`);
+    this.ops.push(
+      `${gray} g ${left.toFixed(2)} ${bottom.toFixed(2)} ${boxWidth.toFixed(2)} ${boxHeight.toFixed(2)} re f`,
+    );
   }
 }
 
-// A party's block: a caption, the name in bold, then IDs and the address.
-// Returns the baseline below its last line.
 export function party(page: Page, caption: string, who: Party, left: number, top: number, columnWidth: number): number {
   page.text(caption.toUpperCase(), left, top, 'F2', 8, 0.45);
   let baseline = top - 16;
@@ -98,7 +101,6 @@ export function party(page: Page, caption: string, who: Party, left: number, top
   return baseline;
 }
 
-// The items table's header band; returns the first row's baseline.
 export function tableHeader(page: Page, baseline: number): number {
   page.box(MARGIN, baseline - 6, RIGHT - MARGIN, 20, 0.94);
   page.text('Popis', MARGIN + 8, baseline, 'F2', 9, 0.3);

@@ -1,5 +1,3 @@
-// The tab bar. Always drawn (without it the root has no tabs), hidden until
-// onboarding is done.
 component TabBar
   props
     tab: string

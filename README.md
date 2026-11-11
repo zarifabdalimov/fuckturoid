@@ -20,6 +20,7 @@ cd app
 bun exact.mjs ios --run      # build and launch on the booted iOS Simulator
 bun exact.mjs test ios       # run app.test.contract
 bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
+bun run check                # oxfmt --check + oxlint (also: lint, lint:fix, format)
 ```
 
 ## Layout

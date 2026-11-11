@@ -1,6 +1,3 @@
-// ARES, the Czech register of economic subjects (https://ares.gov.cz): a
-// company's name, DIČ and registered address by its IČO.
-
 import { ARES, COMPANY_PATH, TIMEOUT_MS } from './preset.ts';
 import { type Company, SubjectSchema } from './types.ts';
 import { cityLine, refused, streetLine, zipLine } from './utils.ts';

@@ -1,5 +1,3 @@
-// Your details: the supplier block of every invoice. During onboarding it has
-// a Done that waits for a name; later it is opened from Invoices to edit.
 use Company from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
 

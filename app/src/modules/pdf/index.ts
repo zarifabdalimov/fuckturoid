@@ -1,11 +1,3 @@
-// An invoice as a PDF, written by hand: no library, no embedded font.
-//
-// It uses the PDF's standard Helvetica (ISO 32000-1 §9.6.2.2), which every
-// viewer supplies, with WinAnsiEncoding (Annex D) for the Latin-1 letters and a
-// /Differences array for the Czech ones WinAnsi lacks (č ř ě ů ď ť ň), named
-// by their Adobe glyph names. Text is measured with Helvetica's AFM widths so
-// amounts can be right-aligned and descriptions wrapped.
-
 import * as R from 'remeda';
 import { czDate, kc } from '../../utils/format.ts';
 import { COL_AMOUNT, COL_PRICE, COL_QTY, DESC_W, EXTRA_NAMES, MARGIN, PAGE_H, PAGE_W, RIGHT } from './preset.ts';
@@ -19,19 +11,16 @@ function pages(inv: InvoiceForPdf): Page[] {
   let page = new Page();
   all.push(page);
 
-  // Title and number.
   let baseline = PAGE_H - MARGIN - 14;
   page.text('Faktura', MARGIN, baseline, 'F2', 24);
   page.textRight(inv.number, RIGHT, baseline, 'F2', 16, 0.35);
   baseline -= 44;
 
-  // Supplier and client, side by side.
   const half = (RIGHT - MARGIN) / 2;
   const left = party(page, 'Dodavatel', inv.supplier, MARGIN, baseline, half - 20);
   const right = party(page, 'Odběratel', inv.client, MARGIN + half + 10, baseline, half - 20);
   baseline = Math.min(left, right) - 14;
 
-  // Dates and payment, in a shaded band.
   page.box(MARGIN, baseline - 38, RIGHT - MARGIN, 50, 0.96);
   const facts: [string, string][] = [
     ['Datum vystavení', czDate(inv.issued)],
@@ -46,11 +35,9 @@ function pages(inv: InvoiceForPdf): Page[] {
   });
   baseline -= 70;
 
-  // Items, onto further pages as they need.
   baseline = tableHeader(page, baseline);
   for (const item of inv.items) {
     const lines = wrap(item.description, 'F1', 10, DESC_W);
-    // A row: its lines from `baseline` down, a rule 7 pt under the last, the next row 16 pt under that.
     const height = (lines.length - 1) * 13 + 23;
     if (baseline - height < MARGIN + 90) {
       page = new Page();
@@ -65,31 +52,32 @@ function pages(inv: InvoiceForPdf): Page[] {
     baseline -= height;
   }
 
-  // The total.
   baseline -= 18;
   page.text('Celkem k úhradě', COL_PRICE - 120, baseline, 'F2', 12);
   page.textRight(kc(inv.total), COL_AMOUNT - 8, baseline, 'F2', 16);
   baseline -= 30;
   if (!inv.supplier.dic) page.text('Dodavatel není plátcem DPH.', MARGIN, baseline, 'F1', 9, 0.45);
 
-  // Page numbers when there is more than one.
   if (all.length > 1) {
-    R.forEach(all, (each, index) => each.textRight(`Strana ${index + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5));
+    R.forEach(all, (each, index) =>
+      each.textRight(`Strana ${index + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5),
+    );
   }
   return all;
 }
 
-// The PDF file's bytes. Every byte of the file is below 256, so a string's
-// length is its byte length and the xref offsets are string offsets.
 export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
   const drawn = pages(inv);
   const objects: string[] = [];
-  const add = (body: string): number => objects.push(body); // its object number
+  const add = (body: string): number => objects.push(body);
 
-  const catalog = add(''); // filled once the pages' number is known
+  const catalog = add('');
   const pagesId = add('');
   const encoding = add(
-    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${R.join(R.map(EXTRA_NAMES, (name) => `/${name}`), ' ')}] >>`,
+    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${R.join(
+      R.map(EXTRA_NAMES, (name) => `/${name}`),
+      ' ',
+    )}] >>`,
   );
   const f1 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding ${encoding} 0 R >>`);
   const f2 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding ${encoding} 0 R >>`);
@@ -105,7 +93,10 @@ export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
     );
   }
   objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
-  objects[pagesId - 1] = `<< /Type /Pages /Kids [${R.join(R.map(kids, (kid) => `${kid} 0 R`), ' ')}] /Count ${kids.length} >>`;
+  objects[pagesId - 1] = `<< /Type /Pages /Kids [${R.join(
+    R.map(kids, (kid) => `${kid} 0 R`),
+    ' ',
+  )}] /Count ${kids.length} >>`;
   const info = add(`<< /Title ${literal(`Faktura ${inv.number}`)} /Producer (F*ckturoid) >>`);
 
   let file = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';

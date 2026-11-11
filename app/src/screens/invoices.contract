@@ -1,4 +1,3 @@
-// The Invoices tab: the list, an invoice's detail, and the new/edit sheet.
 use Badge, EmptyState from "exact:content"
 use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
 use blankItem, draftTotal, toItem, toDraft from "../model/model.contract"
@@ -54,7 +53,6 @@ component InvoiceList
                     Badge(label="Overdue", tint=some("-exact-system-red"))
                 image "symbol:forward-chevron"
 
-// A party on an invoice: name, IDs, address.
 component PartySection
   props
     title: string
@@ -137,9 +135,6 @@ component InvoiceDetail
           button press=back buttonStyle="filled" testId="missing-invoice-back"
             text "Back to Invoices"
 
-// The new/edit sheet. It keeps its own drafts, starting from `invoice` (an empty
-// one for New), and hands the root the finished invoice on Save: save(clientId,
-// issued, dueDays, items). A new sheet is a new component, so its drafts start fresh.
 component InvoiceForm
   props
     route: number
@@ -154,11 +149,9 @@ component InvoiceForm
   state issued = isNew ? today : invoice.issued
   state dueDays = isNew ? 14 : invoice.dueDays
   state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((line, position) => toDraft(line, position))
-  // The next line's key: a line keeps its key while others are added and removed.
   state nextKey = invoice.items.length + 1
   derive lines = items.filter(draft => itemFilled(draft))
   derive total = draftTotal(items)
-  // Why Save is disabled (not red: nothing is wrong yet).
   derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(draft => not itemValid(draft)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
 
   action pickClient(value: string)

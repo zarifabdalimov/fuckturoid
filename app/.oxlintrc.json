@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "id-length": ["error", { "min": 2, "exceptions": ["R"], "properties": "never" }]
+  },
+  "ignorePatterns": ["exact.mjs", "app.contract.d.ts", "target", ".exact", "dist"]
+}

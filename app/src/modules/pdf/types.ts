@@ -1,5 +1,3 @@
-// What the PDF is made from: an invoice with its two parties.
-
 export type Party = {
   name: string;
   ico: string;
@@ -19,4 +17,4 @@ export type InvoiceForPdf = {
   total: number;
 };
 
-export type Font = 'F1' | 'F2'; // Helvetica, Helvetica-Bold
+export type Font = 'F1' | 'F2';

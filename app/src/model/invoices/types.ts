@@ -5,7 +5,6 @@ type SaveArgs = Args<'saveInvoice'>;
 export type Party = SaveArgs[1];
 export type Item = SaveArgs[5][number];
 
-// What the person decides; the rest (number, due date, total) follows from it.
 export type InvoiceInput = {
   client: Party;
   supplier: Party;

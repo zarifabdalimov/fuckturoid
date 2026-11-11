@@ -1,4 +1,3 @@
-// The landing screen, shown at first launch until onboarding is done.
 component Welcome
   props
     route: number
