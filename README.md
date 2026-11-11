@@ -25,3 +25,5 @@ bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 
 - **Your details:** name, IČO, DIČ and address, kept on the device. A valid IČO fills the
   rest from [ARES](https://ares.gov.cz).
+- **Clients:** a searchable list kept in a file on the device; add or edit in a sheet with
+  the same ARES autofill, refused on a duplicate IČO; swipe or Delete (which asks) removes one.

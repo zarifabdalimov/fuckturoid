@@ -83,3 +83,47 @@ test "details survive a relaunch"
   clock settle
   expect text "name" == "Jan Novák"
   expect text "city" == "Brno"
+
+test "a client is added by IČO, refused twice, edited and deleted"
+  tap "get-started"
+  clock settle
+  type "name" "Jan Novák"
+  tap "finish"
+  clock settle
+  tap "tab-clients"
+  clock settle
+  expect tree has "empty-add-client"
+  tap "add-client"
+  clock settle
+  type "c-ico" "28888286"
+  clock data
+  expect text "c-name" == "STRV s.r.o."
+  tap "client-save"
+  clock data
+  clock settle
+  expect tree has "client-1"
+  tap "add-client"
+  clock settle
+  type "c-ico" "28888286"
+  clock data
+  tap "client-save"
+  clock data
+  expect text "c-error" == "STRV s.r.o. already has this IČO."
+  tap "client-cancel"
+  clock settle
+  tap "client-1"
+  clock settle
+  tap "edit-client"
+  clock settle
+  expect text "c-name" == "STRV s.r.o."
+  type "c-email" "billing@strv.com"
+  tap "client-save"
+  clock data
+  clock settle
+  expect text "client-email" == "billing@strv.com"
+  tap "delete-client"
+  clock settle
+  tap "remove-client-confirm"
+  clock data
+  clock settle
+  expect tree has "empty-add-client"

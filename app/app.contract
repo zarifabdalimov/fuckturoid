@@ -1,6 +1,7 @@
 // Fuckturoid: invoicing for phones.
 // First launch: a landing screen, then the person's own details (the supplier
-// block of every invoice; an IČO fills the rest from ARES), then home.
+// block of every invoice; an IČO fills the rest from ARES), then two tabs:
+// Invoices and Clients. Clients are kept in a file by app.ts.
 
 use EmptyState from "exact:content"
 
@@ -14,9 +15,27 @@ shape Company
   city: string
   zip: string
 
+shape Client
+  id: string
+  name: string
+  ico: string
+  dic: string
+  street: string
+  city: string
+  zip: string
+  email: string
+
+shape Reply
+  ok: bool
+  error: string
+
 routes nav
-  home "/"
+  tab invoices "/"
     details "/details"
+  tab clients "/clients"
+    client "/clients/:id"
+    editClient "/clients/:id/edit"
+    newClient "/new-client"
 
 // One digit of an IČO, or -100 for anything else so the checksum fails.
 fn digit(s: string, i: number): number = match parseNumber(s.slice(i, i + 1)) { case some(n) => n, case none => -100 }
@@ -27,7 +46,25 @@ fn icoCheck(s: string): number = icoSum(s) % 11 == 0 ? 1 : icoSum(s) % 11 == 1 ?
 
 fn icoValid(s: string): bool = s.length == 8 and icoSum(s) >= 0 and digit(s, 7) == icoCheck(s)
 
+fn icoBad(s: string): bool = s != "" and not icoValid(s)
+
+// What an IČO field says under it, for your details and a client's alike.
+// rIco/rOk/rError/rName are the last ARES reply; it counts only for the IČO it answered.
+fn icoMessage(ico: string, busy: bool, broke: bool, rIco: string, rOk: bool, rError: string, rName: string): string = ico == "" ? "" : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : busy ? "Looking it up in ARES…" : broke ? "Couldn't reach ARES. Check your connection and try again." : rIco == ico and rError != "" ? rError : rIco == ico and rOk ? `Filled in from ARES: ${rName}` : ""
+
+fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="")
+
+fn clientOf(cs: Client[], id: string): Client = match first(cs.filter(c => c.id == id)) { case some(c) => c, case none => noClient() }
+
+fn found(cs: Client[], id: string): bool = cs.filter(c => c.id == id).length > 0
+
+fn matches(c: Client, q: string): bool = c.name.toLowerCase().includes(q.trim().toLowerCase()) or c.ico.includes(q.trim()) or c.city.toLowerCase().includes(q.trim().toLowerCase())
+
+// "IČO 28888286 · Praha 8", leaving out what's empty.
+fn clientLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.city].filter(p => p != "").join(" · ")
+
 component App
+  // Your details: the supplier on every invoice.
   state onboarded = false persist
   state ico = "" persist
   state name = "" persist
@@ -37,21 +74,55 @@ component App
   state zip = "" persist
   mutation looked as shape Company then afterLookup
 
+  // The client sheet's drafts; cId is "" for a new client.
+  state cId = ""
+  state cName = ""
+  state cIco = ""
+  state cDic = ""
+  state cStreet = ""
+  state cCity = ""
+  state cZip = ""
+  state cEmail = ""
+  // The last Save's refusal, shown in red until a Save succeeds.
+  state cRefusal = ""
+  state query = ""
+  // The client the detail's Delete asks about.
+  state aimed = ""
+  resource clients = loadClients() as shape Client[] else empty()
+  mutation clientLooked as shape Company then afterClientLookup
+  mutation clientSaved as shape Reply refreshes clients then afterClientSave
+  mutation clientRemoved as shape Reply refreshes clients
+
   // The reply counts only while it answers the IČO in the field.
   derive replyIco = match looked { case some(r) => r.ico, case none => "" }
-  derive current = replyIco == ico and ico != ""
-  derive replyOk = current and match looked { case some(r) => r.ok, case none => false }
-  derive replyError = current ? match looked { case some(r) => r.error, case none => "" } : ""
+  derive replyOk = replyIco == ico and ico != "" and match looked { case some(r) => r.ok, case none => false }
+  derive replyError = match looked { case some(r) => r.error, case none => "" }
   derive replyName = match looked { case some(r) => r.name, case none => "" }
-  derive icoHint = ico == "" ? "Enter your IČO and the rest fills in from ARES." : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : pending(looked) ? "Looking it up in ARES…" : failed(looked) ? "Couldn't reach ARES. Check your connection and try again." : replyError != "" ? replyError : replyOk ? `Filled in from ARES: ${replyName}` : ""
+  derive icoHint = ico == "" ? "Enter your IČO and the rest fills in from ARES." : icoMessage(ico, pending(looked), failed(looked), replyIco, replyOk, replyError, replyName)
+  derive icoRed = icoBad(ico) or failed(looked) or replyIco == ico and replyError != ""
   derive canFinish = name.trim() != ""
-  derive icoProblem = ico != "" and (ico.length != 8 or not icoValid(ico))
 
+  derive cReplyIco = match clientLooked { case some(r) => r.ico, case none => "" }
+  derive cReplyOk = cReplyIco == cIco and cIco != "" and match clientLooked { case some(r) => r.ok, case none => false }
+  derive cReplyError = match clientLooked { case some(r) => r.error, case none => "" }
+  derive cReplyName = match clientLooked { case some(r) => r.name, case none => "" }
+  derive cIcoHint = cIco == "" ? "Enter the client's IČO and the rest fills in from ARES." : icoMessage(cIco, pending(clientLooked), failed(clientLooked), cReplyIco, cReplyOk, cReplyError, cReplyName)
+  derive cIcoRed = icoBad(cIco) or failed(clientLooked) or cReplyIco == cIco and cReplyError != ""
+  derive cSaveError = match clientSaved { case some(r) => r.error, case none => "" }
+  // Why Save is disabled (not red: nothing is wrong yet).
+  derive cSaveHint = pending(clientSaved) ? "Saving…" : cName.trim() == "" ? "Enter a name to save." : icoBad(cIco) ? "Fix the IČO or leave it empty to save." : ""
+  derive canSaveClient = cSaveHint == ""
+  derive shown = clients.filter(c => matches(c, query))
+  derive aimedName = clientOf(clients, aimed).name
+
+  action pick(tab: string)
+    nav = select(nav, tab)
   action follow(url: string)
     nav = go(nav, url)
   action back
     nav = back(nav)
-  // Opens the details: from the landing screen, and later from home.
+
+  // Your details: from the landing screen, and later from Invoices.
   action start
     nav = push(nav, "/details")
   action finish
@@ -83,67 +154,290 @@ component App
   action editZip(v: string)
     zip = v
 
+  // Clients.
+  action search(v: string)
+    query = v
+  action reloadClients
+    refresh clients
+  action openAddClient
+    cId = ""
+    cName = ""
+    cIco = ""
+    cDic = ""
+    cStreet = ""
+    cCity = ""
+    cZip = ""
+    cEmail = ""
+    cRefusal = ""
+    nav = push(nav, "/new-client")
+  action openEditClient(id: string)
+    let c = clientOf(clients, id)
+    cId = c.id
+    cName = c.name
+    cIco = c.ico
+    cDic = c.dic
+    cStreet = c.street
+    cCity = c.city
+    cZip = c.zip
+    cEmail = c.email
+    cRefusal = ""
+    nav = push(nav, path("editClient", id))
+  action editCIco(v: string)
+    cIco = v.trim()
+    if icoValid(v.trim()) and not pending(clientLooked)
+      send clientLooked = lookupIco(v.trim())
+  action lookupClient
+    if icoValid(cIco) and not pending(clientLooked)
+      send clientLooked = lookupIco(cIco)
+  action afterClientLookup
+    if cReplyOk
+      cName = cReplyName
+      cDic = match clientLooked { case some(r) => r.dic, case none => cDic }
+      cStreet = match clientLooked { case some(r) => r.street, case none => cStreet }
+      cCity = match clientLooked { case some(r) => r.city, case none => cCity }
+      cZip = match clientLooked { case some(r) => r.zip, case none => cZip }
+  action editCName(v: string)
+    cName = v
+  action editCDic(v: string)
+    cDic = v.trim().toUpperCase()
+  action editCStreet(v: string)
+    cStreet = v
+  action editCCity(v: string)
+    cCity = v
+  action editCZip(v: string)
+    cZip = v
+  action editCEmail(v: string)
+    cEmail = v.trim()
+  action saveClient
+    if canSaveClient and not pending(clientSaved)
+      send clientSaved = saveClient(cId, cName.trim(), cIco, cDic, cStreet.trim(), cCity.trim(), cZip.trim(), cEmail)
+  // The sheet closes only on an ok reply; a refusal keeps it open, saying why.
+  action afterClientSave
+    cRefusal = cSaveError
+    if cSaveError == "" and (top(nav).name == "newClient" or top(nav).name == "editClient")
+      nav = back(nav)
+  action askRemoveClient(id: string)
+    aimed = id
+    showModal("remove-client")
+  // A row's swipe deletes at once; the detail's Delete asks first, then leaves the detail.
+  action removeClient(id: string)
+    send clientRemoved = removeClient(id)
+    if top(nav).name == "client" and top(nav).params.id == id
+      nav = back(nav)
+
   view
     main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
-      for e in stack(nav) key=e.id
-        if e.name == "home"
-          if onboarded
-            column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column"
-              header display="flex" align-items="center"
-                text "Invoices" role="heading" aria-level=1 flex=1
-                button press=start aria-label="Your details" testId="open-details"
-                  image "symbol:person"
-              column flex=1 min-height=0 testId="home"
-                EmptyState(symbol="symbol:document", title="No invoices yet", message=`Invoices from ${name} will show up here. Making them is coming next.`)
-          else
-            column navigationKey=`${e.id}` navigationBar="none" position="absolute" inset=0 testId="welcome"
-              scroll flex=1 min-height=0
-                column min-height="100%" box-sizing="border-box" padding=32 gap=20
-                  justify-content="center" align-items="center" text-align="center"
-                  image "symbol:document" font="-exact-large-title" color="AccentColor" aria-hidden=true
-                  text "Fuckturoid" role="heading" aria-level=1 font="-exact-large-title" font-weight=800
-                  text "Invoicing without the fuckery." font="-exact-title2" font-weight=600
-                  text "Bill clients from your phone, get paid, and give zero f*cks about paperwork." color="-exact-secondary-label" max-width="22rem"
-              button press=start buttonStyle="filled" margin=24 testId="get-started"
-                text "Get started"
-        if e.name == "details"
-          column navigationKey=`${e.id}` navigationScroll="form" position="absolute" inset=0
-            display="flex" flex-direction="column"
-            header display="flex" align-items="center"
-              text "Your details" role="heading" aria-level=1 flex=1
-              if not onboarded
-                button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
-                  text "Done"
-            list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-              section
-                row
-                  text "IČO"
-                  input value=ico input=editIco submit=lookup placeholder="12345678" aria-label="IČO"
-                    inputmode="numeric" maxlength=8 testId="ico" flex=1 min-width=0 text-align="end"
-                row
-                  button press=lookup disabled=(not icoValid(ico) or pending(looked)) testId="lookup"
-                    text (pending(looked) ? "Looking up…" : "Fill in from ARES")
-                footer
-                  text icoHint color=(icoProblem or failed(looked) or replyError != "" ? "-exact-system-red" : "-exact-secondary-label") testId="ico-hint"
-              section
-                row
-                  input value=name input=editName placeholder="Name or company" aria-label="Name"
-                    autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
-                row
-                  text "DIČ"
-                  input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
-                    autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
-                footer
-                  text "Leave DIČ empty if you aren't registered for VAT."
-              section
-                row
-                  input value=street input=editStreet placeholder="Street and number" aria-label="Street"
-                    autocomplete="street-address" testId="street" flex=1 min-width=0
-                row
-                  input value=city input=editCity placeholder="City" aria-label="City"
-                    autocomplete="address-level2" testId="city" flex=1 min-width=0
-                row
-                  input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
-                    autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
-                footer
-                  text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
+      display="flex" flex-direction="column"
+      column flex=1 min-height=0 position="relative"
+        for t in nav.tabs key=t.name
+          column role="tabpanel" id=`panel-${t.name}` position="absolute" inset=0
+            for e in t.stack key=e.id
+              if e.name == "invoices"
+                if onboarded
+                  column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column"
+                    header display="flex" align-items="center"
+                      text "Invoices" role="heading" aria-level=1 flex=1
+                      button press=start aria-label="Your details" testId="open-details"
+                        image "symbol:person"
+                    column flex=1 min-height=0 testId="home"
+                      EmptyState(symbol="symbol:document", title="No invoices yet", message=`Invoices from ${name} will show up here. Making them is coming next.`)
+                else
+                  column navigationKey=`${e.id}` navigationBar="none" position="absolute" inset=0 testId="welcome"
+                    scroll flex=1 min-height=0
+                      column min-height="100%" box-sizing="border-box" padding=32 gap=20
+                        justify-content="center" align-items="center" text-align="center"
+                        image "symbol:document" font="-exact-large-title" color="AccentColor" aria-hidden=true
+                        text "Fuckturoid" role="heading" aria-level=1 font="-exact-large-title" font-weight=800
+                        text "Invoicing without the fuckery." font="-exact-title2" font-weight=600
+                        text "Bill clients from your phone, get paid, and give zero f*cks about paperwork." color="-exact-secondary-label" max-width="22rem"
+                    button press=start buttonStyle="filled" margin=24 testId="get-started"
+                      text "Get started"
+
+              if e.name == "details"
+                column navigationKey=`${e.id}` navigationScroll="form" position="absolute" inset=0
+                  display="flex" flex-direction="column"
+                  header display="flex" align-items="center"
+                    text "Your details" role="heading" aria-level=1 flex=1
+                    if not onboarded
+                      button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
+                        text "Done"
+                  list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+                    section
+                      row
+                        text "IČO"
+                        input value=ico input=editIco submit=lookup placeholder="12345678" aria-label="IČO"
+                          inputmode="numeric" maxlength=8 testId="ico" flex=1 min-width=0 text-align="end"
+                      row
+                        button press=lookup disabled=(not icoValid(ico) or pending(looked)) testId="lookup"
+                          text (pending(looked) ? "Looking up…" : "Fill in from ARES")
+                      footer
+                        text icoHint color=(icoRed ? "-exact-system-red" : "-exact-secondary-label") testId="ico-hint"
+                    section
+                      row
+                        input value=name input=editName placeholder="Name or company" aria-label="Name"
+                          autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
+                      row
+                        text "DIČ"
+                        input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
+                          autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
+                      footer
+                        text "Leave DIČ empty if you aren't registered for VAT."
+                    section
+                      row
+                        input value=street input=editStreet placeholder="Street and number" aria-label="Street"
+                          autocomplete="street-address" testId="street" flex=1 min-width=0
+                      row
+                        input value=city input=editCity placeholder="City" aria-label="City"
+                          autocomplete="address-level2" testId="city" flex=1 min-width=0
+                      row
+                        input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
+                          autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
+                      footer
+                        text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
+
+              if e.name == "clients"
+                column navigationKey=`${e.id}` navigationScroll="clients-list" position="absolute" inset=0
+                  display="flex" flex-direction="column"
+                  header display="flex" flex-wrap="wrap" align-items="center" gap=8
+                    text "Clients" role="heading" aria-level=1 flex=1
+                    button press=openAddClient aria-label="Add Client" testId="add-client"
+                      image "symbol:add"
+                    if clients.length > 0
+                      input type="search" value=query input=search placeholder="Search" aria-label="Search Clients"
+                        testId="search-clients" width="100%"
+                  // In place of the list: a failed read, no clients, no match.
+                  if failed(clients)
+                    EmptyState(symbol="symbol:alert", title="Can't Open Clients", message="Something went wrong reading them.")
+                      button press=reloadClients testId="clients-retry"
+                        text "Try Again"
+                  else if clients.length == 0 and not pending(clients)
+                    EmptyState(symbol="symbol:people", title="No Clients Yet", message="Add the people and companies you invoice. An IČO fills in the rest from ARES.")
+                      button press=openAddClient testId="empty-add-client"
+                        text "Add Client"
+                  else if shown.length == 0 and not pending(clients)
+                    EmptyState(symbol="symbol:search", title=`No Results for “${query.trim()}”`, message="Check the spelling or try a new search.")
+                  else
+                    list id="clients-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+                      section
+                        for c in shown key=c.id
+                          link href=path("client", c.id) delete=removeClient(c.id) testId=`client-${c.id}`
+                            column flex=1 min-width=0 gap=2 padding-top=4 padding-bottom=4
+                              text c.name
+                              if clientLine(c) != ""
+                                text clientLine(c) font="-exact-subheadline" color="-exact-secondary-label"
+                            image "symbol:forward-chevron"
+
+              if e.name == "client"
+                column navigationKey=`${e.id}` navigationScroll=`client-${e.id}` position="absolute" inset=0
+                  display="flex" flex-direction="column"
+                  header display="flex" align-items="center"
+                    text (found(clients, e.params.id) or pending(clients) ? clientOf(clients, e.params.id).name : "Not Found")
+                      role="heading" aria-level=2 testId="client-title"
+                    if found(clients, e.params.id)
+                      button press=openEditClient(e.params.id) testId="edit-client"
+                        text "Edit"
+                  if found(clients, e.params.id) or pending(clients)
+                    list id=`client-${e.id}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+                      for c in clients.filter(x => x.id == e.params.id) key=c.id
+                        section
+                          row
+                            text "IČO"
+                            text (c.ico == "" ? "None" : c.ico) testId="client-ico"
+                          row
+                            text "DIČ"
+                            text (c.dic == "" ? "Not a VAT payer" : c.dic) testId="client-dic"
+                        section
+                          header
+                            text "Address"
+                          row padding-top=10 padding-bottom=10
+                            column flex=1 min-width=0 gap=2
+                              if c.street == "" and c.city == "" and c.zip == ""
+                                text "No address" color="-exact-secondary-label"
+                              if c.street != ""
+                                text c.street testId="client-street"
+                              if c.zip != "" or c.city != ""
+                                text [c.zip, c.city].filter(p => p != "").join(" ") testId="client-city"
+                        section
+                          header
+                            text "Email"
+                          row
+                            text (c.email == "" ? "No email" : c.email) color=(c.email == "" ? "-exact-secondary-label" : "-exact-label") testId="client-email"
+                        section
+                          button press=askRemoveClient(c.id) destructive=true testId="delete-client"
+                            text "Delete Client"
+                  else
+                    EmptyState(symbol="symbol:alert", title="No such client", message="They may have been deleted.")
+                      button press=back buttonStyle="filled" testId="missing-back"
+                        text "Back to Clients"
+
+              if e.name == "newClient" or e.name == "editClient"
+                column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll=`client-form-${e.id}` position="absolute" inset=0
+                  header display="flex" align-items="center" justify-content="space-between"
+                    button id="back" press=back aria-label="Cancel" testId="client-cancel"
+                      image "symbol:close"
+                    text (e.name == "newClient" ? "New Client" : "Edit Client") role="heading"
+                    button press=saveClient buttonStyle="bordered-prominent" aria-label="Save" testId="client-save"
+                      disabled=(not canSaveClient or pending(clientSaved))
+                      image "symbol:checkmark"
+                  list id=`client-form-${e.id}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+                    section
+                      row
+                        text "IČO"
+                        input value=cIco input=editCIco submit=lookupClient placeholder="12345678" aria-label="Client IČO"
+                          inputmode="numeric" maxlength=8 autofocus=(e.name == "newClient") testId="c-ico" flex=1 min-width=0 text-align="end"
+                      row
+                        button press=lookupClient disabled=(not icoValid(cIco) or pending(clientLooked)) testId="c-lookup"
+                          text (pending(clientLooked) ? "Looking up…" : "Fill in from ARES")
+                      footer
+                        text cIcoHint color=(cIcoRed ? "-exact-system-red" : "-exact-secondary-label") testId="c-ico-hint"
+                    section
+                      row
+                        column flex=1 min-width=0 gap=4
+                          input value=cName input=editCName submit=saveClient placeholder="Name or company" aria-label="Client name"
+                            autocapitalize="words" aria-invalid=(cRefusal != "") testId="c-name"
+                          if cRefusal != ""
+                            text cRefusal font="-exact-footnote" color="-exact-system-red" testId="c-error"
+                      row
+                        text "DIČ"
+                        input value=cDic input=editCDic placeholder="CZ12345678" aria-label="Client DIČ"
+                          autocapitalize="characters" testId="c-dic" flex=1 min-width=0 text-align="end"
+                      footer
+                        text cSaveHint testId="c-save-hint"
+                    section
+                      header
+                        text "Address"
+                      row
+                        input value=cStreet input=editCStreet placeholder="Street and number" aria-label="Client street"
+                          testId="c-street" flex=1 min-width=0
+                      row
+                        input value=cCity input=editCCity placeholder="City" aria-label="Client city"
+                          testId="c-city" flex=1 min-width=0
+                      row
+                        input value=cZip input=editCZip placeholder="ZIP" aria-label="Client ZIP"
+                          inputmode="numeric" testId="c-zip" flex=1 min-width=0
+                    section
+                      header
+                        text "Email"
+                      row
+                        input type="email" value=cEmail input=editCEmail placeholder="Where invoices go" aria-label="Client email"
+                          autocapitalize="none" testId="c-email" flex=1 min-width=0
+                      footer
+                        text "Optional. Invoices can be sent here."
+
+      if onboarded
+        row role="tablist" testId="tabs"
+          button role="tab" aria-controls="panel-invoices" aria-selected=(nav.tab == "invoices") press=pick("invoices")
+            testId="tab-invoices" flex=1
+            image "symbol:document"
+            text "Invoices"
+          button role="tab" aria-controls="panel-clients" aria-selected=(nav.tab == "clients") press=pick("clients")
+            testId="tab-clients" flex=1
+            image "symbol:people"
+            text "Clients"
+
+      dialog id="remove-client" role="alertdialog" aria-label=`Delete ${aimedName}?`
+        text "Their details will be gone. This can't be undone."
+        button press=removeClient(aimed) destructive=true commandfor="remove-client" command="close" testId="remove-client-confirm"
+          text "Delete"
+        button commandfor="remove-client" command="close" testId="remove-client-cancel"
+          text "Cancel"
