@@ -32,6 +32,8 @@ app/
   app.ts              the data module: grants, and each source: load → rule → save
   app.test.contract   tests
   app.tamber          brand colours (the landing screen's gradient and ink)
+  assets/             icon-1024.png (the app icon), icons/ (symbols the platform lacks)
+  tools/draw-icon.py  draws the app icon: `python3 tools/draw-icon.py assets/icon-1024.png`
   src/
     screens/          one .contract per screen (and parts: Confirm, TabBar, IcoSection)
     model/            business logic
