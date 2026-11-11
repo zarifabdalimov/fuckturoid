@@ -3,16 +3,17 @@ component Button
     label: string
     variant: string
     size: string
+    leadingIcon: string
     trailingIcon: string
     disabled: bool
     press: action
     buttonId: string
   view
     button press=press disabled=disabled testId=buttonId
-      height=(size == "large" ? 58 : 42) padding=(size == "large" ? "0 20px" : "0 14px")
-      border-radius=(size == "large" ? 18 : 12) width=(size == "large" ? "100%" : "auto") box-sizing="border-box"
+      height=(size == "large" ? 54 : 42) padding=(size == "large" ? "0 20px" : "0 14px")
+      border-radius=(size == "large" ? 16 : 12) width=(size == "large" ? "100%" : "auto") box-sizing="border-box"
       background-color=(variant == "primary" ? "button.primary" : "button.secondary")
-      color=(variant == "primary" ? "button.primary-ink" : "button.secondary-ink")
+      color=(variant == "primary" ? "button.primary-ink" : variant == "danger" ? "control.danger" : "button.secondary-ink")
       :active
         opacity=0.85
         -exact-press-scale=0.97
@@ -20,6 +21,8 @@ component Button
         background-color="button.disabled"
         color="button.disabled-ink"
       row gap=8 align-items="center" justify-content="center" width="100%" height="100%"
-        text label font-size=(size == "large" ? 18 : 15) font-weight=(size == "large" ? 700 : 600)
+        if leadingIcon != ""
+          image leadingIcon aria-hidden=true
+        text label font-size=(size == "large" ? 17 : 15) font-weight=(size == "large" ? 700 : 600)
         if trailingIcon != ""
           image trailingIcon aria-hidden=true

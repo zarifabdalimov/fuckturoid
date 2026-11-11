@@ -1,0 +1,15 @@
+use Choice from "../model/model.contract"
+
+component Segmented
+  props
+    label: string
+    choices: Choice[]
+    value: string
+    pick: action
+    testPrefix: string
+  view
+    row role="radiogroup" aria-label=label
+      for choice in choices key=choice.value
+        button role="radio" aria-checked=(value == choice.value) press=pick(choice.value) testId=`${testPrefix}-${choice.value}`
+          flex=1
+          text choice.label

@@ -20,6 +20,7 @@ theme
   control.placeholder = light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.38))
   control.danger = light-dark(#c7362b, #ff7a7a)
   control.success = light-dark(#16794a, #6ee7a8)
+  control.warning = light-dark(#b25e09, #ffb366)
   button.primary = light-dark(#111214, #ffffff)
   button.primary-ink = light-dark(#ffffff, #0f1012)
   button.secondary = light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.15))

@@ -4,6 +4,8 @@ component Welcome
   props
     route: number
     start: action
+    demo: action
+    loadingDemo: bool
   view
     column navigationKey=`${route}` navigationBar="none" position="absolute" inset=0 testId="welcome"
       color-scheme="dark" status-bar-style="light-content" background-color="hero.base"
@@ -22,10 +24,15 @@ component Welcome
             Feature(symbol="symbol:document", label="Send PDF invoices in seconds")
             Feature(symbol="symbol:icon.bank", label="Bank details and IBAN on every invoice")
       column padding="12px 24px 20px" gap=12
-        Button(label="Get started", variant="primary", size="large", trailingIcon="symbol:forward-chevron", disabled=false,
+        Button(label="Get started", variant="primary", size="large", leadingIcon="", trailingIcon="symbol:forward-chevron", disabled=false,
           press=start, buttonId="get-started")
         text "Free, no account. Your data stays on this phone." font-size=13 color="hero.ink-faint"
           text-align="center"
+        button press=demo disabled=loadingDemo testId="load-demo" align-self="center" color="hero.ink-soft"
+          :active
+            opacity=0.6
+          text (loadingDemo ? "Loading demo data…" : "Try with demo data") font-size=14 font-weight=600
+            text-decoration="underline"
 
 component Feature
   props

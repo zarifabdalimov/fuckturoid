@@ -2,6 +2,9 @@ use EmptyState from "exact:content"
 use Client, Company, clientOf, clientLine, found from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
 use CurrencyChoice from "./currency-choice.contract"
+use TextField from "../components/text-field.contract"
+use Button from "../components/button.contract"
+use FormSection from "../components/form-section.contract"
 
 component ClientList
   props
@@ -27,12 +30,12 @@ component ClientList
             testId="search-clients" width="100%"
       if broke
         EmptyState(symbol="symbol:alert", title="Can't Open Clients", message="Something went wrong reading them.")
-          button press=reload testId="clients-retry"
-            text "Try Again"
+          Button(label="Try Again", variant="primary", size="small", leadingIcon="", trailingIcon="",
+            disabled=false, press=reload, buttonId="clients-retry")
       else if clients.length == 0 and not loading
         EmptyState(symbol="symbol:people", title="No Clients Yet", message="Add the people and companies you invoice. An IČO fills in the rest from ARES.")
-          button press=add testId="empty-add-client"
-            text "Add Client"
+          Button(label="Add Client", variant="primary", size="small", leadingIcon="symbol:add", trailingIcon="",
+            disabled=false, press=add, buttonId="empty-add-client")
       else if shown.length == 0 and not loading
         EmptyState(symbol="symbol:search", title=`No Results for “${query.trim()}”`, message="Check the spelling or try a new search.")
       else
@@ -98,8 +101,8 @@ component ClientDetail
                 text "Delete Client"
       else
         EmptyState(symbol="symbol:alert", title="No such client", message="They may have been deleted.")
-          button press=back buttonStyle="filled" testId="missing-back"
-            text "Back to Clients"
+          Button(label="Back to Clients", variant="primary", size="small", leadingIcon="", trailingIcon="",
+            disabled=false, press=back, buttonId="missing-back")
 
 component ClientForm
   props
@@ -139,46 +142,33 @@ component ClientForm
         button press=save buttonStyle="bordered-prominent" aria-label="Save" testId="client-save"
           disabled=(not canSave)
           image "symbol:checkmark"
-      list id=`client-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        IcoSection(prefix="c-", label="Client IČO", emptyHint="Enter the client's IČO and the rest fills in from ARES.", ico=ico,
-          reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=isNew, edit=editIco, lookup=lookup)
-        section
-          row
-            column flex=1 min-width=0 gap=4
-              input value=name input=editName submit=save placeholder="Name or company" aria-label="Client name"
-                autocapitalize="words" aria-invalid=(refusal != "") testId="c-name"
-              if refusal != ""
-                text refusal font="-exact-footnote" color="-exact-system-red" testId="c-error"
-          row
-            text "DIČ"
-            input value=dic input=editDic placeholder="CZ12345678" aria-label="Client DIČ"
-              autocapitalize="characters" testId="c-dic" flex=1 min-width=0 text-align="end"
-          footer
-            text saveHint testId="c-save-hint"
-        section
-          header
-            text "Address"
-          row
-            input value=street input=editStreet placeholder="Street and number" aria-label="Client street"
-              testId="c-street" flex=1 min-width=0
-          row
-            input value=city input=editCity placeholder="City" aria-label="Client city"
-              testId="c-city" flex=1 min-width=0
-          row
-            input value=zip input=editZip placeholder="ZIP" aria-label="Client ZIP"
-              inputmode="numeric" testId="c-zip" flex=1 min-width=0
-        section
-          header
-            text "Email"
-          row
-            input type="email" value=email input=editEmail placeholder="Where invoices go" aria-label="Client email"
-              autocapitalize="none" testId="c-email" flex=1 min-width=0
-          footer
-            text "Optional. Invoices can be sent here."
-        section
-          header
-            text "Currency"
-          row
+      scroll id=`client-form-${route}` flex=1 min-height=0 keyboardDismissMode="on-drag" overflow-x="hidden"
+        column padding="16px 20px 32px" gap=24 width="100%" box-sizing="border-box"
+          IcoSection(prefix="c-", label="IČO", emptyHint="Type the client's IČO and the rest fills in from ARES.", ico=ico,
+            reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=isNew, edit=editIco, lookup=lookup)
+          TextField(label="Name or company", value=name, placeholder="Acme s.r.o.", hint=refusal, hintTone="error",
+            invalid=(refusal != ""), edit=editName, submit=save, fieldId="c-name", keyboard="text", autocomplete="organization",
+            autocapitalize="words", enterkeyhint="done", maxlength=120, autofocus=false)
+          TextField(label="DIČ", value=dic, placeholder="CZ12345678", hint="Optional.", hintTone="muted", invalid=false,
+            edit=editDic, submit=save, fieldId="c-dic", keyboard="text", autocomplete="off", autocapitalize="characters",
+            enterkeyhint="done", maxlength=14, autofocus=false)
+          FormSection(title="Address", footer="", footerTone="muted")
+            TextField(label="Street and number", value=street, placeholder="Rohanské nábřeží 678/23", hint="", hintTone="muted",
+              invalid=false, edit=editStreet, submit=save, fieldId="c-street", keyboard="text", autocomplete="street-address",
+              autocapitalize="words", enterkeyhint="done", maxlength=120, autofocus=false)
+            row gap=12
+              column flex=2 min-width=0
+                TextField(label="City", value=city, placeholder="Praha 8", hint="", hintTone="muted", invalid=false,
+                  edit=editCity, submit=save, fieldId="c-city", keyboard="text", autocomplete="address-level2",
+                  autocapitalize="words", enterkeyhint="done", maxlength=80, autofocus=false)
+              column flex=1 min-width=0
+                TextField(label="ZIP", value=zip, placeholder="186 00", hint="", hintTone="muted", invalid=false,
+                  edit=editZip, submit=save, fieldId="c-zip", keyboard="numeric", autocomplete="postal-code",
+                  autocapitalize="none", enterkeyhint="done", maxlength=6, autofocus=false)
+          TextField(label="Email", value=email, placeholder="billing@example.com", hint="Optional. Invoices can be sent here.",
+            hintTone="muted", invalid=false, edit=editEmail, submit=save, fieldId="c-email", keyboard="email",
+            autocomplete="email", autocapitalize="none", enterkeyhint="done", maxlength=120, autofocus=false)
+          FormSection(title="Currency", footer="New invoices for this client start in this currency.", footerTone="muted")
             CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="c-currency")
-          footer
-            text "New invoices for this client start in this currency."
+          if saveHint != ""
+            text saveHint font-size=13 color="control.hint" testId="c-save-hint"

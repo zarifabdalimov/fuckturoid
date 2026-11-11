@@ -14,6 +14,7 @@ component TextField
     autocapitalize: string
     enterkeyhint: string
     maxlength: number
+    autofocus: bool
   slot
   state focused = false
   action began
@@ -28,7 +29,7 @@ component TextField
         border-color=(invalid ? "control.danger" : focused ? "control.focus" : "control.line")
         input id=fieldId value=value input=edit submit=submit focus=began blur=ended placeholder=placeholder
           aria-label=label inputmode=keyboard autocomplete=autocomplete autocapitalize=autocapitalize
-          enterkeyhint=enterkeyhint maxlength=maxlength appearance="none" outline="none" flex=1 min-width=0
+          enterkeyhint=enterkeyhint maxlength=maxlength autofocus=autofocus appearance="none" outline="none" flex=1 min-width=0
           padding="15px 10px 15px 0" font-size=17 color="control.ink" testId=fieldId
           ::placeholder
             color="control.placeholder"

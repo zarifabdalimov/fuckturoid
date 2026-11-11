@@ -1,0 +1,45 @@
+component FormSection
+  props
+    title: string
+    footer: string
+    footerTone: string
+  slot
+  view
+    column gap=10 min-width=0
+      if title != ""
+        text title font-size=15 font-weight=700 color="control.ink"
+      children
+      if footer != ""
+        text footer font-size=13
+          color=(footerTone == "error" ? "control.danger" : footerTone == "warning" ? "control.warning" : footerTone == "success" ? "control.success" : "control.hint")
+
+component FieldFrame
+  props
+    label: string
+  slot
+  view
+    column gap=8 min-width=0
+      if label != ""
+        text label font-size=13 font-weight=600 color="control.label" letter-spacing=0.3
+      row align-items="center" gap=12 min-height=54 padding="0 12px 0 16px" border-radius=16 box-sizing="border-box"
+        background-color="control.fill" border-width=1 border-style="solid" border-color="control.line" color="control.ink"
+        children
+
+component LinkCard
+  props
+    href: string
+    symbol: string
+    title: string
+    subtitle: string
+    cardId: string
+  view
+    link href=href testId=cardId display="flex" flex-direction="row" align-items="center" gap=14 padding=16
+      border-radius=16 background-color="control.fill" box-sizing="border-box" border-width=1 border-style="solid"
+      border-color="control.line" color="control.ink" text-decoration="none"
+      column width=40 height=40 border-radius=12 background-color="button.secondary" align-items="center"
+        justify-content="center"
+        image symbol aria-hidden=true
+      column flex=1 min-width=0 gap=2
+        text title font-size=16 font-weight=600
+        text subtitle font-size=13 color="control.hint" testId=`${cardId}-subtitle`
+      image "symbol:forward-chevron" color="control.placeholder" aria-hidden=true

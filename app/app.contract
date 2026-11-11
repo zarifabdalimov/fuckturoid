@@ -75,6 +75,7 @@ component App
   mutation bankAccountRemoved as shape Reply refreshes bankAccounts
 
   mutation erased as shape Reply refreshes clients, invoices, bankAccounts
+  mutation demoLoaded as shape Company refreshes clients, invoices, bankAccounts then afterDemo
 
   action step
     now = performanceNow()
@@ -87,6 +88,19 @@ component App
 
   action start
     nav = push(nav, "/details")
+  action loadDemo
+    if not pending(demoLoaded)
+      send demoLoaded = loadDemo(today)
+  action afterDemo
+    let demo = reply(demoLoaded)
+    if demo.ok
+      ico = demo.ico
+      name = demo.name
+      dic = demo.dic
+      street = demo.street
+      city = demo.city
+      zip = demo.zip
+      onboarded = true
   action finish
     if canFinish
       onboarded = true
@@ -257,7 +271,7 @@ component App
     nav = back(nav)
 
   view
-    main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
+    main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%" color-scheme="dark"
       display="flex" flex-direction="column"
       column flex=1 min-height=0 position="relative"
         for tab in nav.tabs key=tab.name
@@ -269,7 +283,7 @@ component App
                     loading=pending(invoices), broke=failed(invoices),
                     openDetails=start, add=openAddInvoice, addClient=goAddClient, reload=reloadInvoices)
                 else
-                  Welcome(route=entry.id, start=start)
+                  Welcome(route=entry.id, start=start, demo=loadDemo, loadingDemo=pending(demoLoaded))
               if entry.name == "details" and not onboarded
                 Onboarding(route=entry.id, canFinish=canFinish, ico=ico, name=name, dic=dic, street=street, city=city,
                   zip=zip, bankAccounts=bankAccounts, ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),

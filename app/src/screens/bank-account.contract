@@ -1,6 +1,9 @@
 use EmptyState from "exact:content"
 use BankAccount, accountProblem from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
+use Button from "../components/button.contract"
+use TextField from "../components/text-field.contract"
+use FormSection from "../components/form-section.contract"
 
 component BankAccountForm
   props
@@ -32,25 +35,18 @@ component BankAccountForm
         text (isNew ? "New Bank Account" : "Bank Account") role="heading"
         button press=submit buttonStyle="bordered-prominent" aria-label="Save" disabled=(not canSave) testId="bank-save"
           image "symbol:checkmark"
-      list id=`bank-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        section
-          row
-            input value=account input=editAccount submit=submit placeholder="123456789/0800" aria-label="Account number"
-              autocapitalize="none" autofocus=isNew testId="bank-account" flex=1 min-width=0
-          footer
-            text (problem != "" ? problem : "The Czech format: number/bank code, with a prefix if it has one.")
-              color=(problem != "" ? "-exact-system-red" : "-exact-secondary-label") testId="bank-hint"
-        section
-          header
-            text "Currency"
-          row
+      scroll id=`bank-form-${route}` flex=1 min-height=0 keyboardDismissMode="on-drag" overflow-x="hidden"
+        column padding="16px 20px 32px" gap=24 width="100%" box-sizing="border-box"
+          TextField(label="Account number", value=account, placeholder="123456789/0800",
+            hint=(problem != "" ? problem : "The Czech format: number/bank code, with a prefix if it has one."),
+            hintTone=(problem != "" ? "error" : "muted"), invalid=(problem != ""), edit=editAccount, submit=submit,
+            fieldId="bank-account", keyboard="text", autocomplete="off", autocapitalize="none", enterkeyhint="done",
+            maxlength=24, autofocus=isNew)
+          FormSection(title="Currency", footer=`Invoices in ${currency} are paid into this account.`, footerTone="muted")
             CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="bank-currency")
-          footer
-            text `Invoices in ${currency} are paid into this account.`
-        if not isNew
-          section
-            button press=remove destructive=true testId="bank-delete"
-              text "Delete Bank Account"
+          if not isNew
+            Button(label="Delete Bank Account", variant="danger", size="large", leadingIcon="symbol:delete", trailingIcon="",
+              disabled=false, press=remove, buttonId="bank-delete")
 
 component BankAccountList
   props
@@ -68,8 +64,8 @@ component BankAccountList
           image "symbol:add"
       if bankAccounts.length == 0 and not loading
         EmptyState(symbol="symbol:icon.bank", title="No bank accounts yet", message="Add the accounts clients pay into, one for each currency you invoice in.")
-          button press=add testId="empty-add-bank-account"
-            text "Add Bank Account"
+          Button(label="Add Bank Account", variant="primary", size="small", leadingIcon="symbol:add", trailingIcon="",
+            disabled=false, press=add, buttonId="empty-add-bank-account")
       else
         list id="bank-accounts-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
           section

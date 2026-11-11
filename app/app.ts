@@ -25,6 +25,7 @@ import {
   withDefaults,
 } from './src/model/invoices/index.ts';
 import { lookupIco } from './src/modules/ares/index.ts';
+import { demoData } from './src/modules/demo/index.ts';
 import { invoicePdf } from './src/modules/pdf/index.ts';
 import { store, writeFile } from './src/modules/storage/index.ts';
 
@@ -102,6 +103,24 @@ const sources: Sources = {
     bankAccounts.save(storage, putBankAccount(await bankAccounts.load(storage), id, account, currency)),
   removeBankAccount: async ([id], _store, storage) =>
     bankAccounts.save(storage, removeBankAccount(await bankAccounts.load(storage), id)),
+
+  loadDemo: async ([today], _store, storage) => {
+    const demo = demoData(today);
+    await clients.save(storage, demo.clients);
+    await bankAccounts.save(storage, demo.bankAccounts);
+    await invoices.save(storage, demo.invoices as StoredInvoice[]);
+    const { supplier } = demo;
+    return {
+      ok: true,
+      error: '',
+      ico: supplier.ico,
+      name: supplier.name,
+      dic: supplier.dic,
+      street: supplier.street,
+      city: supplier.city,
+      zip: supplier.zip,
+    };
+  },
 
   eraseAll: async (_args, _store, storage) => {
     await clients.save(storage, []);

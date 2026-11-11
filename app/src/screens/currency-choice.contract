@@ -1,10 +1,11 @@
+use Choice from "../model/model.contract"
+use Segmented from "../components/segmented.contract"
+
 component CurrencyChoice
   props
     value: string
     pick: action
     testPrefix: string
   view
-    row role="radiogroup" aria-label="Currency"
-      for currency in ["CZK", "EUR", "USD", "GBP"] key=currency
-        button role="radio" aria-checked=(value == currency) press=pick(currency) testId=`${testPrefix}-${currency}` flex=1
-          text currency
+    Segmented(label="Currency", choices=["CZK", "EUR", "USD", "GBP"].map(code => Choice(value=code, label=code)), value=value,
+      pick=pick, testPrefix=testPrefix)

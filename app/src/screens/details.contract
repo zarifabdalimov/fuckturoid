@@ -1,4 +1,7 @@
-use BankAccount, Company from "../model/model.contract"
+use BankAccount, Company, bankAccountsLine from "../model/model.contract"
+use TextField from "../components/text-field.contract"
+use Button from "../components/button.contract"
+use FormSection, LinkCard from "../components/form-section.contract"
 use IcoSection from "./ico-section.contract"
 
 component Details
@@ -25,6 +28,9 @@ component Details
     editStreet: action
     editCity: action
     editZip: action
+  action advance
+  action done
+    blur()
   view
     column navigationKey=`${route}` navigationScroll="form" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -33,40 +39,33 @@ component Details
         if not onboarded
           button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
             text "Done"
-      list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        IcoSection(prefix="", label="IČO", emptyHint="Enter your IČO and the rest fills in from ARES.", ico=ico,
-          reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=false, edit=editIco, lookup=lookup)
-        section
-          row
-            input value=name input=editName placeholder="Name or company" aria-label="Name"
-              autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
-          row
-            text "DIČ"
-            input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
-              autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
-          footer
-            text "Leave DIČ empty if you aren't registered for VAT."
-        section
-          row
-            input value=street input=editStreet placeholder="Street and number" aria-label="Street"
-              autocomplete="street-address" testId="street" flex=1 min-width=0
-          row
-            input value=city input=editCity placeholder="City" aria-label="City"
-              autocomplete="address-level2" testId="city" flex=1 min-width=0
-          row
-            input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
-              autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
-          footer
-            text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
-        section
-          link href=path("bankAccounts") testId="open-bank-accounts"
-            text "Bank accounts" flex=1
-            text (bankAccounts.length == 0 ? "None yet" : bankAccounts.length == 1 ? "1 account" : `${bankAccounts.length} accounts`)
-              color="-exact-secondary-label" testId="bank-accounts-count"
-            image "symbol:forward-chevron"
-        if onboarded
-          section
-            button press=logout destructive=true testId="logout"
-              text "Log Out"
-            footer
-              text "Erases your details, clients and invoices from this phone."
+      scroll id="form" flex=1 min-height=0 keyboardDismissMode="on-drag" overflow-x="hidden"
+        column padding="16px 20px 32px" gap=24 width="100%" box-sizing="border-box"
+          IcoSection(prefix="", label="IČO", emptyHint="Type your IČO and the rest fills in from ARES.", ico=ico,
+            reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=false, edit=editIco, lookup=lookup)
+          TextField(label="Name or company", value=name, placeholder="Jan Novák",
+            hint=(canFinish ? "" : "Add your name to finish."), hintTone="error", invalid=(not canFinish), edit=editName,
+            submit=advance, fieldId="name", keyboard="text", autocomplete="organization", autocapitalize="words",
+            enterkeyhint="next", maxlength=120, autofocus=false)
+          TextField(label="DIČ", value=dic, placeholder="CZ12345678", hint="Optional. Leave it empty if you aren't a VAT payer.",
+            hintTone="muted", invalid=false, edit=editDic, submit=advance, fieldId="dic", keyboard="text",
+            autocomplete="off", autocapitalize="characters", enterkeyhint="next", maxlength=14, autofocus=false)
+          FormSection(title="Address", footer="These details appear on every invoice you send.", footerTone="muted")
+            TextField(label="Street and number", value=street, placeholder="Vinohradská 1", hint="", hintTone="muted",
+              invalid=false, edit=editStreet, submit=advance, fieldId="street", keyboard="text",
+              autocomplete="street-address", autocapitalize="words", enterkeyhint="next", maxlength=120, autofocus=false)
+            row gap=12
+              column flex=2 min-width=0
+                TextField(label="City", value=city, placeholder="Praha 2", hint="", hintTone="muted", invalid=false,
+                  edit=editCity, submit=advance, fieldId="city", keyboard="text", autocomplete="address-level2",
+                  autocapitalize="words", enterkeyhint="next", maxlength=80, autofocus=false)
+              column flex=1 min-width=0
+                TextField(label="ZIP", value=zip, placeholder="120 00", hint="", hintTone="muted", invalid=false,
+                  edit=editZip, submit=done, fieldId="zip", keyboard="numeric", autocomplete="postal-code",
+                  autocapitalize="none", enterkeyhint="done", maxlength=6, autofocus=false)
+          LinkCard(href=path("bankAccounts"), symbol="symbol:icon.bank", title="Bank accounts",
+            subtitle=bankAccountsLine(bankAccounts), cardId="open-bank-accounts")
+          if onboarded
+            FormSection(title="", footer="Erases your details, clients and invoices from this phone.", footerTone="muted")
+              Button(label="Log Out", variant="danger", size="large", leadingIcon="", trailingIcon="", disabled=false,
+                press=logout, buttonId="logout")

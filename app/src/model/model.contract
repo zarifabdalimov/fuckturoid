@@ -19,6 +19,10 @@ shape Client
   email: string
   currency: string
 
+shape Choice
+  value: string
+  label: string
+
 shape Reply
   ok: bool
   error: string
@@ -162,6 +166,8 @@ shape BankAccount
 fn accountFor(accounts: BankAccount[], currency: string): string = match first(accounts.filter(entry => entry.currency == currency)) { case some(entry) => entry.account, case none => "" }
 
 fn noBankAccount(): BankAccount = BankAccount(id="", account="", currency="CZK")
+
+fn bankAccountsLine(accounts: BankAccount[]): string = accounts.length == 0 ? "Add one so clients know where to pay" : accounts.length == 1 ? "1 account" : `${accounts.length} accounts`
 
 fn bankAccountOf(accounts: BankAccount[], id: string): BankAccount = match first(accounts.filter(entry => entry.id == id)) { case some(entry) => entry, case none => noBankAccount() }
 

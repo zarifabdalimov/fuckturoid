@@ -1,6 +1,7 @@
-use BankAccount, Company, icoValid, icoMessage, icoProblem, aresFound from "../model/model.contract"
+use BankAccount, Company, icoValid, icoMessage, icoProblem, aresFound, bankAccountsLine from "../model/model.contract"
 use TextField from "../components/text-field.contract"
 use Button from "../components/button.contract"
+use LinkCard from "../components/form-section.contract"
 
 component Onboarding
   props
@@ -26,8 +27,7 @@ component Onboarding
     editZip: action
   derive icoHint = ico == "" ? "Type it and the rest fills in from ARES." : icoMessage(ico, ares, lookingUp, lookupFailed)
   derive icoTone = icoProblem(ico, ares, lookupFailed) ? "error" : aresFound(ico, ares) ? "success" : "muted"
-  action next(id: string)
-    focus(id)
+  action advance
   action done
     blur()
   view
@@ -47,41 +47,32 @@ component Onboarding
               font-size=16 color="hero.ink-soft"
           TextField(label="IČO", value=ico, placeholder="12345678", hint=icoHint, hintTone=icoTone,
             invalid=icoProblem(ico, ares, lookupFailed), edit=editIco, submit=lookup, fieldId="ico", keyboard="numeric",
-            autocomplete="off", autocapitalize="none", enterkeyhint="search", maxlength=8)
-            Button(label=(lookingUp ? "Looking…" : "Fill in"), variant="primary", size="small", trailingIcon="",
+            autocomplete="off", autocapitalize="none", enterkeyhint="search", maxlength=8, autofocus=false)
+            Button(label=(lookingUp ? "Looking…" : "Fill in"), variant="primary", size="small", leadingIcon="", trailingIcon="",
               disabled=(not icoValid(ico) or lookingUp), press=lookup, buttonId="lookup")
           TextField(label="Name or company", value=name, placeholder="Jan Novák", hint="", hintTone="muted",
-            invalid=false, edit=editName, submit=next("dic"), fieldId="name", keyboard="text",
-            autocomplete="organization", autocapitalize="words", enterkeyhint="next", maxlength=120)
+            invalid=false, edit=editName, submit=advance, fieldId="name", keyboard="text",
+            autocomplete="organization", autocapitalize="words", enterkeyhint="next", maxlength=120, autofocus=false)
           TextField(label="DIČ", value=dic, placeholder="CZ12345678",
             hint="Optional. Leave it empty if you aren't a VAT payer.", hintTone="muted", invalid=false, edit=editDic,
-            submit=next("street"), fieldId="dic", keyboard="text", autocomplete="off", autocapitalize="characters",
-            enterkeyhint="next", maxlength=14)
+            submit=advance, fieldId="dic", keyboard="text", autocomplete="off", autocapitalize="characters",
+            enterkeyhint="next", maxlength=14, autofocus=false)
           TextField(label="Street and number", value=street, placeholder="Vinohradská 1", hint="", hintTone="muted",
-            invalid=false, edit=editStreet, submit=next("city"), fieldId="street", keyboard="text",
-            autocomplete="street-address", autocapitalize="words", enterkeyhint="next", maxlength=120)
+            invalid=false, edit=editStreet, submit=advance, fieldId="street", keyboard="text",
+            autocomplete="street-address", autocapitalize="words", enterkeyhint="next", maxlength=120, autofocus=false)
           row gap=12
             column flex=2 min-width=0
               TextField(label="City", value=city, placeholder="Praha 2", hint="", hintTone="muted", invalid=false,
-                edit=editCity, submit=next("zip"), fieldId="city", keyboard="text", autocomplete="address-level2",
-                autocapitalize="words", enterkeyhint="next", maxlength=80)
+                edit=editCity, submit=advance, fieldId="city", keyboard="text", autocomplete="address-level2",
+                autocapitalize="words", enterkeyhint="next", maxlength=80, autofocus=false)
             column flex=1 min-width=0
               TextField(label="ZIP", value=zip, placeholder="120 00", hint="", hintTone="muted", invalid=false,
                 edit=editZip, submit=done, fieldId="zip", keyboard="numeric", autocomplete="postal-code",
-                autocapitalize="none", enterkeyhint="done", maxlength=6)
-          link href=path("bankAccounts") testId="open-bank-accounts" display="flex" flex-direction="row"
-            align-items="center" gap=14 padding=16 border-radius=16 background-color="control.fill" box-sizing="border-box"
-            border-width=1 border-style="solid" border-color="control.line" color="hero.ink" text-decoration="none"
-            column width=40 height=40 border-radius=12 background-color="hero.glass" align-items="center"
-              justify-content="center"
-              image "symbol:icon.bank" aria-hidden=true
-            column flex=1 min-width=0 gap=2
-              text "Bank accounts" font-size=16 font-weight=600
-              text (bankAccounts.length == 0 ? "Add one so clients know where to pay" : bankAccounts.length == 1 ? "1 account" : `${bankAccounts.length} accounts`)
-                font-size=13 color="hero.ink-faint" testId="bank-accounts-count"
-            image "symbol:forward-chevron" color="control.placeholder" aria-hidden=true
+                autocapitalize="none", enterkeyhint="done", maxlength=6, autofocus=false)
+          LinkCard(href=path("bankAccounts"), symbol="symbol:icon.bank", title="Bank accounts",
+            subtitle=bankAccountsLine(bankAccounts), cardId="open-bank-accounts")
       column padding="12px 24px 20px" gap=10 box-sizing="border-box"
-        Button(label="Create account", variant="primary", size="large", trailingIcon="symbol:forward-chevron",
+        Button(label="Create account", variant="primary", size="large", leadingIcon="", trailingIcon="symbol:forward-chevron",
           disabled=(not canFinish), press=finish, buttonId="finish")
         text (canFinish ? "You can change all of this later in Your details." : "Add your name to continue.")
           font-size=13 color="hero.ink-faint" text-align="center" testId="finish-hint"

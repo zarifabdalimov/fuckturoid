@@ -1,7 +1,11 @@
 use Badge, EmptyState from "exact:content"
 use BankAccount, Client, Invoice, DraftItem, money, currencySymbol, accountFor, clientOf, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
-use blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount, variableSymbol, languageName from "../model/model.contract"
+use Choice, amount, blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount, variableSymbol, languageName from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
+use Button from "../components/button.contract"
+use TextField from "../components/text-field.contract"
+use FormSection, FieldFrame from "../components/form-section.contract"
+use Segmented from "../components/segmented.contract"
 
 component InvoiceList
   props
@@ -27,16 +31,16 @@ component InvoiceList
             image "symbol:add"
       if broke
         EmptyState(symbol="symbol:alert", title="Can't Open Invoices", message="Something went wrong reading them.")
-          button press=reload testId="invoices-retry"
-            text "Try Again"
+          Button(label="Try Again", variant="primary", size="small", leadingIcon="", trailingIcon="",
+            disabled=false, press=reload, buttonId="invoices-retry")
       else if invoices.length == 0 and not loading and not hasClients
         EmptyState(symbol="symbol:people", title="Add a client first", message="An invoice needs someone to pay it. Add a client, then come back.")
-          button press=addClient testId="first-client"
-            text "Add Client"
+          Button(label="Add Client", variant="primary", size="small", leadingIcon="symbol:add", trailingIcon="",
+            disabled=false, press=addClient, buttonId="first-client")
       else if invoices.length == 0 and not loading
         EmptyState(symbol="symbol:document", title="No invoices yet", message="Bill a client for your work. It takes a minute.")
-          button press=add testId="empty-add-invoice"
-            text "New Invoice"
+          Button(label="New Invoice", variant="primary", size="small", leadingIcon="symbol:add", trailingIcon="",
+            disabled=false, press=add, buttonId="empty-add-invoice")
       else
         list id="invoices-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="home"
           InvoiceStats(invoices=lastYear(invoices, today), today=today)
@@ -169,8 +173,8 @@ component InvoiceDetail
                 text "Delete Invoice"
       else
         EmptyState(symbol="symbol:alert", title="No such invoice", message="It may have been deleted.")
-          button press=back buttonStyle="filled" testId="missing-invoice-back"
-            text "Back to Invoices"
+          Button(label="Back to Invoices", variant="primary", size="small", leadingIcon="", trailingIcon="",
+            disabled=false, press=back, buttonId="missing-invoice-back")
 
 component InvoiceForm
   props
@@ -206,8 +210,8 @@ component InvoiceForm
     issued = value
   action pickLanguage(value: string)
     language = value
-  action setDueDays(days: number)
-    dueDays = days
+  action pickDueDays(value: string)
+    dueDays = amount(value)
   action editDesc(index: number, value: string)
     items = items.map((draft, position) => position == index ? DraftItem(draft, description=value) : draft)
   action editQty(index: number, value: string)
@@ -220,6 +224,9 @@ component InvoiceForm
   action removeItem(index: number)
     if items.length > 1
       items = items.filter((draft, position) => position != index)
+  action advance
+  action done
+    blur()
   action submit
     if saveHint == ""
       save(clientId, issued, dueDays, lines.map(draft => toItem(draft)), currency, language)
@@ -232,83 +239,68 @@ component InvoiceForm
         text (isNew ? "New Invoice" : "Edit Invoice") role="heading"
         button press=submit buttonStyle="bordered-prominent" aria-label="Save" disabled=(saveHint != "") testId="invoice-save"
           image "symbol:checkmark"
-      list id=`invoice-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        section
-          row
-            text "Client"
-            select value=clientId change=pickClient aria-label="Client" testId="i-client"
-              option "Choose…" value=""
+      scroll id=`invoice-form-${route}` flex=1 min-height=0 keyboardDismissMode="on-drag" overflow-x="hidden"
+        column padding="16px 20px 32px" gap=24 width="100%" box-sizing="border-box"
+          FieldFrame(label="Client")
+            button popovertarget="client-menu" aria-label="Client" testId="i-client" flex=1 min-width=0 height=52
+              color="control.ink" text-align="start"
+              row align-items="center" gap=8 width="100%" height="100%"
+                text (clientId == "" ? "Choose a client" : clientOf(clients, clientId).name) flex=1 min-width=0
+                  font-size=17 color=(clientId == "" ? "control.placeholder" : "control.ink")
+                image "symbol:chooser" color="control.hint" aria-hidden=true
+            column id="client-menu" popover="auto" role="menu" aria-label="Client"
               for client in clients key=client.id
-                option client.name value=client.id
-          row
-            text "Issued"
+                button role="menuitemradio" aria-checked=(client.id == clientId) press=pickClient(client.id)
+                  popovertarget="client-menu" popovertargetaction="hide" testId=`i-client-${client.id}`
+                  text client.name
+                  text client.currency
+          FieldFrame(label="Issued")
             input type="date" value=issued change=setIssued aria-label="Issued" testId="i-issued"
-        section
-          header
-            text "Currency"
-          row
+          FormSection(title="Currency",
+            footer=(payTo != "" ? `Paid to ${payTo}.` : `You have no ${currency} bank account yet. Add one in Your details, or the invoice goes out without one.`),
+            footerTone=(payTo != "" ? "muted" : "warning"))
             CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="i-currency")
-          footer
-            text (payTo != "" ? `Paid to ${payTo}.` : `You have no ${currency} bank account yet. Add one in Your details, or the invoice goes out without one.`)
-              color=(payTo != "" ? "-exact-secondary-label" : "-exact-system-orange") testId="i-pay-to"
-        section
-          header
-            text "Due"
-          row role="radiogroup" aria-label="Due in"
-            for days in [7, 14, 30] key=days
-              button role="radio" aria-checked=(dueDays == days) press=setDueDays(days) testId=`due-${days}` flex=1
-                text `${days} ${days == 1 ? "day" : "days"}`
-          footer
-            text `Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`
-        section
-          header
-            text "Invoice language"
-          row role="radiogroup" aria-label="Invoice language"
-            for option in ["cs", "en"] key=option
-              button role="radio" aria-checked=(language == option) press=pickLanguage(option) testId=`language-${option}` flex=1
-                text languageName(option)
-          footer
-            text (language == "en" ? "The PDF is in English." : "The PDF is in Czech.")
-        for draft, index in items key=draft.key
-          section
-            header
-              text (items.length > 1 ? `Item ${index + 1}` : "Item")
-            row
-              input value=draft.description input=editDesc(index) placeholder="Description, e.g. App development"
-                aria-label=`Item ${index + 1} description` autocapitalize="sentences" flex=1 min-width=0 testId=`item-desc-${index}`
-            row
-              text "Quantity"
-              input value=draft.quantity input=editQty(index) inputmode="decimal" placeholder="1"
-                aria-label=`Item ${index + 1} quantity` flex=1 min-width=0 text-align="end" testId=`item-qty-${index}`
-            row
-              text "Unit price"
-              input value=draft.price input=editPrice(index) inputmode="decimal" placeholder="0"
-                aria-label=`Item ${index + 1} price` flex=1 min-width=0 text-align="end" testId=`item-price-${index}`
-              text currencySymbol(currency) color="-exact-secondary-label"
-            if itemFilled(draft) and not itemValid(draft) and draft.price.trim() != ""
-              row
-                text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
-            else
-              row
-                text "Amount" color="-exact-secondary-label"
-                text money(itemHellers(draft), currency) font-weight=600 font-variant-numeric="tabular-nums"
-                  margin-left="auto" testId=`item-amount-${index}`
-            if items.length > 1
-              button press=removeItem(index) testId=`remove-item-${index}`
-                row gap=8 align-items="center"
-                  image "symbol:delete" color="-exact-system-red" aria-hidden=true
-                  text "Remove Item" color="-exact-system-red"
-        section
-          button press=addItem testId="add-line"
-            row gap=8 align-items="center"
-              image "symbol:add" aria-hidden=true
-              text "Add Item"
-          footer
-            text `Total ${money(total, currency)}` font-weight=600 font-variant-numeric="tabular-nums" testId="i-total"
-        if saveHint != ""
-          section
-            footer
-              text saveHint testId="i-save-hint"
+          FormSection(title="Due", footer=`Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`,
+            footerTone="muted")
+            Segmented(label="Due in", choices=[7, 14, 30].map(days => Choice(value=`${days}`, label=`${days} days`)),
+              value=`${dueDays}`, pick=pickDueDays, testPrefix="due")
+          FormSection(title="Invoice language", footer=(language == "en" ? "The PDF is in English." : "The PDF is in Czech."),
+            footerTone="muted")
+            Segmented(label="Invoice language", choices=["cs", "en"].map(code => Choice(value=code, label=languageName(code))),
+              value=language, pick=pickLanguage, testPrefix="language")
+          for draft, index in items key=draft.key
+            FormSection(title=(items.length > 1 ? `Item ${index + 1}` : "Item"),
+              footer=(itemFilled(draft) and not itemValid(draft) and draft.price.trim() != "" ? "Add a description, a quantity above 0 and a price." : ""),
+              footerTone="error")
+              TextField(label="Description", value=draft.description, placeholder="App development", hint="", hintTone="muted",
+                invalid=false, edit=editDesc(index), submit=advance, fieldId=`item-desc-${index}`,
+                keyboard="text", autocomplete="off", autocapitalize="sentences", enterkeyhint="next", maxlength=200,
+                autofocus=false)
+              row gap=12
+                column flex=1 min-width=0
+                  TextField(label="Quantity", value=draft.quantity, placeholder="1", hint="", hintTone="muted", invalid=false,
+                    edit=editQty(index), submit=advance, fieldId=`item-qty-${index}`, keyboard="decimal",
+                    autocomplete="off", autocapitalize="none", enterkeyhint="next", maxlength=10, autofocus=false)
+                column flex=2 min-width=0
+                  TextField(label="Unit price", value=draft.price, placeholder="0", hint="", hintTone="muted", invalid=false,
+                    edit=editPrice(index), submit=done, fieldId=`item-price-${index}`, keyboard="decimal", autocomplete="off",
+                    autocapitalize="none", enterkeyhint="done", maxlength=14, autofocus=false)
+                    text currencySymbol(currency) color="control.hint" padding-right=8
+              row align-items="center" gap=12
+                text "Amount" color="control.hint" flex=1
+                text money(itemHellers(draft), currency) font-weight=700 font-variant-numeric="tabular-nums" color="control.ink"
+                  testId=`item-amount-${index}`
+              if items.length > 1
+                Button(label="Remove Item", variant="danger", size="small", leadingIcon="symbol:delete", trailingIcon="",
+                  disabled=false, press=removeItem(index), buttonId=`remove-item-${index}`)
+          Button(label="Add Item", variant="secondary", size="large", leadingIcon="symbol:add", trailingIcon="",
+            disabled=false, press=addItem, buttonId="add-line")
+          row align-items="center" gap=12 padding="16px" border-radius=16 background-color="control.fill" box-sizing="border-box"
+            text "Total" font-size=17 font-weight=600 color="control.ink" flex=1
+            text money(total, currency) font-size=22 font-weight=800 font-variant-numeric="tabular-nums" color="control.ink"
+              testId="i-total"
+          if saveHint != ""
+            text saveHint font-size=13 color="control.hint" testId="i-save-hint"
 
 component InvoiceStats
   props
