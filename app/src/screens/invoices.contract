@@ -72,7 +72,7 @@ component PartySection
           if party.street != ""
             text party.street
           if party.zip != "" or party.city != ""
-            text [party.zip, party.city].filter(p => p != "").join(" ")
+            text [party.zip, party.city].filter(part => part != "").join(" ")
 
 component InvoiceDetail
   props
@@ -100,7 +100,7 @@ component InvoiceDetail
             text "Edit"
       if invoiceFound(invoices, id) or loading
         list id=`invoice-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-          for inv in invoices.filter(x => x.id == id) key=inv.id
+          for inv in invoices.filter(candidate => candidate.id == id) key=inv.id
             section
               row
                 text "Total"
@@ -115,12 +115,12 @@ component InvoiceDetail
             section
               header
                 text "Items"
-              for it, i in inv.items key=i
+              for line, index in inv.items key=index
                 row padding-top=6 padding-bottom=6
                   column flex=1 min-width=0 gap=2
-                    text it.description
-                    text `${it.quantity} × ${kc(it.unitPrice)}` font="-exact-subheadline" color="-exact-secondary-label"
-                  text kc(round(it.quantity * it.unitPrice)) font-variant-numeric="tabular-nums"
+                    text line.description
+                    text `${line.quantity} × ${kc(line.unitPrice)}` font="-exact-subheadline" color="-exact-secondary-label"
+                  text kc(round(line.quantity * line.unitPrice)) font-variant-numeric="tabular-nums"
             section
               row
                 text "Issued"
@@ -150,38 +150,38 @@ component InvoiceForm
     saving: bool
     cancel: action
     save: action
-  state clientId = isNew ? (clients.length == 1 ? match clients.at(0) { case some(c) => c.id, case none => "" } : "") : invoice.client.id
+  state clientId = isNew ? (clients.length == 1 ? match clients.at(0) { case some(client) => client.id, case none => "" } : "") : invoice.client.id
   state issued = isNew ? today : invoice.issued
   state dueDays = isNew ? 14 : invoice.dueDays
-  state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((it, j) => toDraft(it, j))
+  state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((line, position) => toDraft(line, position))
   // The next line's key: a line keeps its key while others are added and removed.
   state nextKey = invoice.items.length + 1
-  derive lines = items.filter(d => itemFilled(d))
+  derive lines = items.filter(draft => itemFilled(draft))
   derive total = draftTotal(items)
   // Why Save is disabled (not red: nothing is wrong yet).
-  derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(d => not itemValid(d)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
+  derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(draft => not itemValid(draft)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
 
-  action pickClient(v: string)
-    clientId = v
-  action setIssued(v: string)
-    issued = v
-  action setDueDays(d: number)
-    dueDays = d
-  action editDesc(i: number, v: string)
-    items = items.map((d, j) => j == i ? DraftItem(d, description=v) : d)
-  action editQty(i: number, v: string)
-    items = items.map((d, j) => j == i ? DraftItem(d, quantity=v) : d)
-  action editPrice(i: number, v: string)
-    items = items.map((d, j) => j == i ? DraftItem(d, price=v) : d)
+  action pickClient(value: string)
+    clientId = value
+  action setIssued(value: string)
+    issued = value
+  action setDueDays(days: number)
+    dueDays = days
+  action editDesc(index: number, value: string)
+    items = items.map((draft, position) => position == index ? DraftItem(draft, description=value) : draft)
+  action editQty(index: number, value: string)
+    items = items.map((draft, position) => position == index ? DraftItem(draft, quantity=value) : draft)
+  action editPrice(index: number, value: string)
+    items = items.map((draft, position) => position == index ? DraftItem(draft, price=value) : draft)
   action addItem
     items = items.concat([blankItem(nextKey)])
     nextKey = nextKey + 1
-  action removeItem(i: number)
+  action removeItem(index: number)
     if items.length > 1
-      items = items.filter((d, j) => j != i)
+      items = items.filter((draft, position) => position != index)
   action submit
     if saveHint == ""
-      save(clientId, issued, dueDays, lines.map(d => toItem(d)))
+      save(clientId, issued, dueDays, lines.map(draft => toItem(draft)))
 
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`invoice-form-${route}` position="absolute" inset=0
@@ -197,8 +197,8 @@ component InvoiceForm
             text "Client"
             select value=clientId change=pickClient aria-label="Client" testId="i-client"
               option "Choose…" value=""
-              for c in clients key=c.id
-                option c.name value=c.id
+              for client in clients key=client.id
+                option client.name value=client.id
           row
             text "Issued"
             input type="date" value=issued change=setIssued aria-label="Issued" testId="i-issued"
@@ -206,31 +206,31 @@ component InvoiceForm
           header
             text "Due"
           row role="radiogroup" aria-label="Due in"
-            for d in [7, 14, 30] key=d
-              button role="radio" aria-checked=(dueDays == d) press=setDueDays(d) testId=`due-${d}` flex=1
-                text `${d} ${d == 1 ? "day" : "days"}`
+            for days in [7, 14, 30] key=days
+              button role="radio" aria-checked=(dueDays == days) press=setDueDays(days) testId=`due-${days}` flex=1
+                text `${days} ${days == 1 ? "day" : "days"}`
           footer
             text `Payment is due ${dueDays} ${dueDays == 1 ? "day" : "days"} after the issue date.`
         section
           header
             text "Items"
-          for d, i in items key=d.key
-            row delete=removeItem(i) disabled=(items.length <= 1)
+          for draft, index in items key=draft.key
+            row delete=removeItem(index) disabled=(items.length <= 1)
               column flex=1 min-width=0 gap=8 padding-top=6 padding-bottom=6
-                input value=d.description input=editDesc(i) placeholder="What you did" aria-label=`Item ${i + 1}`
-                  autocapitalize="sentences" testId=`item-desc-${i}`
+                input value=draft.description input=editDesc(index) placeholder="What you did" aria-label=`Item ${index + 1}`
+                  autocapitalize="sentences" testId=`item-desc-${index}`
                 row gap=8 align-items="center"
-                  input value=d.quantity input=editQty(i) inputmode="decimal" aria-label=`Item ${i + 1} quantity`
-                    width="3.5rem" text-align="end" testId=`item-qty-${i}`
+                  input value=draft.quantity input=editQty(index) inputmode="decimal" aria-label=`Item ${index + 1} quantity`
+                    width="3.5rem" text-align="end" testId=`item-qty-${index}`
                   text "×" color="-exact-secondary-label"
-                  input value=d.price input=editPrice(i) inputmode="decimal" placeholder="Price" aria-label=`Item ${i + 1} price`
-                    flex=1 min-width=0 text-align="end" testId=`item-price-${i}`
+                  input value=draft.price input=editPrice(index) inputmode="decimal" placeholder="Price" aria-label=`Item ${index + 1} price`
+                    flex=1 min-width=0 text-align="end" testId=`item-price-${index}`
                   text "Kč" color="-exact-secondary-label"
-                if itemFilled(d) and not itemValid(d)
+                if itemFilled(draft) and not itemValid(draft)
                   text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
                 else
-                  text kc(itemHellers(d)) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
-                    font-variant-numeric="tabular-nums" testId=`item-amount-${i}`
+                  text kc(itemHellers(draft)) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
+                    font-variant-numeric="tabular-nums" testId=`item-amount-${index}`
           button press=addItem testId="add-line"
             text "Add Item"
           footer

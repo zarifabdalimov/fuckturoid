@@ -8,19 +8,19 @@ import { decodeList, encodeList } from './utils.ts';
 
 export type { Saved } from './types.ts';
 
-export function store<T>(file: string) {
-  let items: T[] | null = null;
+export function store<Entry>(file: string) {
+  let items: Entry[] | null = null;
   return {
-    async load(storage: Storage): Promise<T[]> {
+    async load(storage: Storage): Promise<Entry[]> {
       if (!items) {
-        items = await storage.fs.readFile(file).then(decodeList<T>, (e) => {
-          if (e.code === 'ENOENT') return []; // no file yet
-          throw e;
+        items = await storage.fs.readFile(file).then(decodeList<Entry>, (error) => {
+          if (error.code === 'ENOENT') return []; // no file yet
+          throw error;
         });
       }
       return items;
     },
-    async save(storage: Storage, next: T[]): Promise<Saved> {
+    async save(storage: Storage, next: Entry[]): Promise<Saved> {
       items = next;
       await storage.fs.atomicWriteFile(file, encodeList(next));
       return { ok: true, error: '' };

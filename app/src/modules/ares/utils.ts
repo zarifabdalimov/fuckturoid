@@ -7,24 +7,24 @@ export function refused(ico: string, error: string): Company {
   return { ok: false, error, ico, name: '', dic: '', street: '', city: '', zip: '' };
 }
 
-export function isObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object';
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
 }
 
 // "Rohanské nábřeží 678/23": the street (or the village part when there is no
 // street), the house number, then the orientation number with its letter.
-export function streetLine(s: Sidlo): string {
-  const place = s.nazevUlice ?? s.nazevCastiObce ?? s.nazevObce ?? '';
+export function streetLine(seat: Sidlo): string {
+  const place = seat.nazevUlice ?? seat.nazevCastiObce ?? seat.nazevObce ?? '';
   const orientation =
-    s.cisloOrientacni !== undefined ? `/${s.cisloOrientacni}${s.cisloOrientacniPismeno ?? ''}` : '';
-  const number = s.cisloDomovni !== undefined ? `${s.cisloDomovni}${orientation}` : '';
-  return R.join(R.filter([place, number], (p) => p !== ''), ' ');
+    seat.cisloOrientacni !== undefined ? `/${seat.cisloOrientacni}${seat.cisloOrientacniPismeno ?? ''}` : '';
+  const number = seat.cisloDomovni !== undefined ? `${seat.cisloDomovni}${orientation}` : '';
+  return R.join(R.filter([place, number], (part) => part !== ''), ' ');
 }
 
 // Prague is written with its district ("Praha 8"), as on an envelope.
-export function cityLine(s: Sidlo): string {
-  if (s.nazevObce === 'Praha' && s.nazevMestskehoObvodu) return s.nazevMestskehoObvodu;
-  return s.nazevObce ?? '';
+export function cityLine(seat: Sidlo): string {
+  if (seat.nazevObce === 'Praha' && seat.nazevMestskehoObvodu) return seat.nazevMestskehoObvodu;
+  return seat.nazevObce ?? '';
 }
 
 export function zipLine(psc: number | undefined): string {

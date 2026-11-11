@@ -20,19 +20,19 @@ function pages(inv: InvoiceForPdf): Page[] {
   all.push(page);
 
   // Title and number.
-  let y = PAGE_H - MARGIN - 14;
-  page.text('Faktura', MARGIN, y, 'F2', 24);
-  page.textRight(inv.number, RIGHT, y, 'F2', 16, 0.35);
-  y -= 44;
+  let baseline = PAGE_H - MARGIN - 14;
+  page.text('Faktura', MARGIN, baseline, 'F2', 24);
+  page.textRight(inv.number, RIGHT, baseline, 'F2', 16, 0.35);
+  baseline -= 44;
 
   // Supplier and client, side by side.
   const half = (RIGHT - MARGIN) / 2;
-  const left = party(page, 'Dodavatel', inv.supplier, MARGIN, y, half - 20);
-  const right = party(page, 'Odběratel', inv.client, MARGIN + half + 10, y, half - 20);
-  y = Math.min(left, right) - 14;
+  const left = party(page, 'Dodavatel', inv.supplier, MARGIN, baseline, half - 20);
+  const right = party(page, 'Odběratel', inv.client, MARGIN + half + 10, baseline, half - 20);
+  baseline = Math.min(left, right) - 14;
 
   // Dates and payment, in a shaded band.
-  page.box(MARGIN, y - 38, RIGHT - MARGIN, 50, 0.96);
+  page.box(MARGIN, baseline - 38, RIGHT - MARGIN, 50, 0.96);
   const facts: [string, string][] = [
     ['Datum vystavení', czDate(inv.issued)],
     ['Datum splatnosti', czDate(inv.due)],
@@ -40,41 +40,41 @@ function pages(inv: InvoiceForPdf): Page[] {
     ['Způsob platby', 'Převodem'],
   ];
   const step = (RIGHT - MARGIN) / facts.length;
-  R.forEach(facts, ([label, value], i) => {
-    page.text(label, MARGIN + 10 + i * step, y - 4, 'F1', 8, 0.45);
-    page.text(value, MARGIN + 10 + i * step, y - 22, 'F2', 11);
+  R.forEach(facts, ([label, value], index) => {
+    page.text(label, MARGIN + 10 + index * step, baseline - 4, 'F1', 8, 0.45);
+    page.text(value, MARGIN + 10 + index * step, baseline - 22, 'F2', 11);
   });
-  y -= 70;
+  baseline -= 70;
 
   // Items, onto further pages as they need.
-  y = tableHeader(page, y);
-  for (const it of inv.items) {
-    const lines = wrap(it.description, 'F1', 10, DESC_W);
-    // A row: its lines from baseline y down, a rule 7 pt under the last, the next row 16 pt under that.
+  baseline = tableHeader(page, baseline);
+  for (const item of inv.items) {
+    const lines = wrap(item.description, 'F1', 10, DESC_W);
+    // A row: its lines from `baseline` down, a rule 7 pt under the last, the next row 16 pt under that.
     const height = (lines.length - 1) * 13 + 23;
-    if (y - height < MARGIN + 90) {
+    if (baseline - height < MARGIN + 90) {
       page = new Page();
       all.push(page);
-      y = tableHeader(page, PAGE_H - MARGIN - 14);
+      baseline = tableHeader(page, PAGE_H - MARGIN - 14);
     }
-    R.forEach(lines, (line, i) => page.text(line, MARGIN + 8, y - i * 13, 'F1', 10));
-    page.textRight(quantity(it.quantity), COL_QTY, y, 'F1', 10);
-    page.textRight(kc(it.unitPrice), COL_PRICE, y, 'F1', 10);
-    page.textRight(kc(Math.round(it.quantity * it.unitPrice)), COL_AMOUNT - 8, y, 'F1', 10);
-    page.rule(MARGIN, y - (lines.length - 1) * 13 - 7, RIGHT, 0.88);
-    y -= height;
+    R.forEach(lines, (line, index) => page.text(line, MARGIN + 8, baseline - index * 13, 'F1', 10));
+    page.textRight(quantity(item.quantity), COL_QTY, baseline, 'F1', 10);
+    page.textRight(kc(item.unitPrice), COL_PRICE, baseline, 'F1', 10);
+    page.textRight(kc(Math.round(item.quantity * item.unitPrice)), COL_AMOUNT - 8, baseline, 'F1', 10);
+    page.rule(MARGIN, baseline - (lines.length - 1) * 13 - 7, RIGHT, 0.88);
+    baseline -= height;
   }
 
   // The total.
-  y -= 18;
-  page.text('Celkem k úhradě', COL_PRICE - 120, y, 'F2', 12);
-  page.textRight(kc(inv.total), COL_AMOUNT - 8, y, 'F2', 16);
-  y -= 30;
-  if (!inv.supplier.dic) page.text('Dodavatel není plátcem DPH.', MARGIN, y, 'F1', 9, 0.45);
+  baseline -= 18;
+  page.text('Celkem k úhradě', COL_PRICE - 120, baseline, 'F2', 12);
+  page.textRight(kc(inv.total), COL_AMOUNT - 8, baseline, 'F2', 16);
+  baseline -= 30;
+  if (!inv.supplier.dic) page.text('Dodavatel není plátcem DPH.', MARGIN, baseline, 'F1', 9, 0.45);
 
   // Page numbers when there is more than one.
   if (all.length > 1) {
-    R.forEach(all, (p, i) => p.textRight(`Strana ${i + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5));
+    R.forEach(all, (each, index) => each.textRight(`Strana ${index + 1} z ${all.length}`, RIGHT, MARGIN - 20, 'F1', 8, 0.5));
   }
   return all;
 }
@@ -82,20 +82,20 @@ function pages(inv: InvoiceForPdf): Page[] {
 // The PDF file's bytes. Every byte of the file is below 256, so a string's
 // length is its byte length and the xref offsets are string offsets.
 export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
-  const ps = pages(inv);
+  const drawn = pages(inv);
   const objects: string[] = [];
   const add = (body: string): number => objects.push(body); // its object number
 
   const catalog = add(''); // filled once the pages' number is known
   const pagesId = add('');
   const encoding = add(
-    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${R.join(R.map(EXTRA_NAMES, (n) => `/${n}`), ' ')}] >>`,
+    `<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [1 ${R.join(R.map(EXTRA_NAMES, (name) => `/${name}`), ' ')}] >>`,
   );
   const f1 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding ${encoding} 0 R >>`);
   const f2 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding ${encoding} 0 R >>`);
   const kids: number[] = [];
-  for (const p of ps) {
-    const content = R.join(p.ops, '\n');
+  for (const page of drawn) {
+    const content = R.join(page.ops, '\n');
     const stream = add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
     kids.push(
       add(
@@ -105,21 +105,21 @@ export function invoicePdf(inv: InvoiceForPdf): Uint8Array {
     );
   }
   objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
-  objects[pagesId - 1] = `<< /Type /Pages /Kids [${R.join(R.map(kids, (k) => `${k} 0 R`), ' ')}] /Count ${kids.length} >>`;
+  objects[pagesId - 1] = `<< /Type /Pages /Kids [${R.join(R.map(kids, (kid) => `${kid} 0 R`), ' ')}] /Count ${kids.length} >>`;
   const info = add(`<< /Title ${literal(`Faktura ${inv.number}`)} /Producer (F*ckturoid) >>`);
 
   let file = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';
   const offsets: number[] = [];
-  R.forEach(objects, (body, i) => {
+  R.forEach(objects, (body, index) => {
     offsets.push(file.length);
-    file += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    file += `${index + 1} 0 obj\n${body}\nendobj\n`;
   });
   const xref = file.length;
   file += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (const o of offsets) file += `${String(o).padStart(10, '0')} 00000 n \n`;
+  for (const offset of offsets) file += `${String(offset).padStart(10, '0')} 00000 n \n`;
   file += `trailer\n<< /Size ${objects.length + 1} /Root ${catalog} 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 
   const bytes = new Uint8Array(file.length);
-  for (let i = 0; i < file.length; i++) bytes[i] = file.charCodeAt(i) & 0xff;
+  for (let index = 0; index < file.length; index++) bytes[index] = file.charCodeAt(index) & 0xff;
   return bytes;
 }

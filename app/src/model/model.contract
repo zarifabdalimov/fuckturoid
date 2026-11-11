@@ -27,41 +27,41 @@ shape Reply
   error: string
 
 // One digit of an IČO, or -100 for anything else so the checksum fails.
-fn digit(s: string, i: number): number = match parseNumber(s.slice(i, i + 1)) { case some(n) => n, case none => -100 }
+fn digit(text: string, position: number): number = match parseNumber(text.slice(position, position + 1)) { case some(value) => value, case none => -100 }
 
-fn icoSum(s: string): number = digit(s, 0) * 8 + digit(s, 1) * 7 + digit(s, 2) * 6 + digit(s, 3) * 5 + digit(s, 4) * 4 + digit(s, 5) * 3 + digit(s, 6) * 2
+fn icoSum(ico: string): number = digit(ico, 0) * 8 + digit(ico, 1) * 7 + digit(ico, 2) * 6 + digit(ico, 3) * 5 + digit(ico, 4) * 4 + digit(ico, 5) * 3 + digit(ico, 6) * 2
 
-fn icoCheck(s: string): number = icoSum(s) % 11 == 0 ? 1 : icoSum(s) % 11 == 1 ? 0 : 11 - icoSum(s) % 11
+fn icoCheck(ico: string): number = icoSum(ico) % 11 == 0 ? 1 : icoSum(ico) % 11 == 1 ? 0 : 11 - icoSum(ico) % 11
 
-fn icoValid(s: string): bool = s.length == 8 and icoSum(s) >= 0 and digit(s, 7) == icoCheck(s)
+fn icoValid(ico: string): bool = ico.length == 8 and icoSum(ico) >= 0 and digit(ico, 7) == icoCheck(ico)
 
-fn icoBad(s: string): bool = s != "" and not icoValid(s)
+fn icoBad(ico: string): bool = ico != "" and not icoValid(ico)
 
 fn noCompany(): Company = Company(ok=false, error="", ico="", name="", dic="", street="", city="", zip="")
 
 // A lookup's reply, or an empty one before the first lands.
-fn reply(r: option<Company>): Company = match r { case some(c) => c, case none => noCompany() }
+fn reply(answer: option<Company>): Company = match answer { case some(company) => company, case none => noCompany() }
 
 // A reply counts only for the IČO it answered: an older one, for an IČO since
 // edited, says nothing about the field.
-fn aresFound(ico: string, r: Company): bool = ico != "" and r.ico == ico and r.ok
+fn aresFound(ico: string, answer: Company): bool = ico != "" and answer.ico == ico and answer.ok
 
 // What an IČO field says under it, for your details and a client's alike.
-fn icoMessage(ico: string, r: Company, busy: bool, broke: bool): string = ico == "" ? "" : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : busy ? "Looking it up in ARES…" : broke ? "Couldn't reach ARES. Check your connection and try again." : r.ico == ico and r.error != "" ? r.error : aresFound(ico, r) ? `Filled in from ARES: ${r.name}` : ""
+fn icoMessage(ico: string, answer: Company, busy: bool, broke: bool): string = ico == "" ? "" : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : busy ? "Looking it up in ARES…" : broke ? "Couldn't reach ARES. Check your connection and try again." : answer.ico == ico and answer.error != "" ? answer.error : aresFound(ico, answer) ? `Filled in from ARES: ${answer.name}` : ""
 
 // Whether that message is a problem, shown in red.
-fn icoProblem(ico: string, r: Company, broke: bool): bool = icoBad(ico) or broke or r.ico == ico and r.error != ""
+fn icoProblem(ico: string, answer: Company, broke: bool): bool = icoBad(ico) or broke or answer.ico == ico and answer.error != ""
 
 fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="")
 
-fn clientOf(cs: Client[], id: string): Client = match first(cs.filter(c => c.id == id)) { case some(c) => c, case none => noClient() }
+fn clientOf(clients: Client[], id: string): Client = match first(clients.filter(client => client.id == id)) { case some(client) => client, case none => noClient() }
 
-fn found(cs: Client[], id: string): bool = cs.filter(c => c.id == id).length > 0
+fn found(clients: Client[], id: string): bool = clients.filter(client => client.id == id).length > 0
 
-fn matches(c: Client, q: string): bool = c.name.toLowerCase().includes(q.trim().toLowerCase()) or c.ico.includes(q.trim()) or c.city.toLowerCase().includes(q.trim().toLowerCase())
+fn matches(client: Client, query: string): bool = client.name.toLowerCase().includes(query.trim().toLowerCase()) or client.ico.includes(query.trim()) or client.city.toLowerCase().includes(query.trim().toLowerCase())
 
 // "IČO 28888286 · Praha 8", leaving out what's empty.
-fn clientLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.city].filter(p => p != "").join(" · ")
+fn clientLine(client: Client): string = [client.ico == "" ? "" : `IČO ${client.ico}`, client.city].filter(part => part != "").join(" · ")
 
 // Invoices.
 
@@ -106,9 +106,9 @@ shape Time
 fn blankItem(key: number): DraftItem = DraftItem(key=key, description="", quantity="1", price="")
 
 // "1 500,50" or "1500.5" → 1500.5; -1 when it isn't a number.
-fn amount(s: string): number = match parseNumber(s.trim().replaceAll(" ", "").replaceAll(",", ".")) { case some(n) => n, case none => -1 }
+fn amount(text: string): number = match parseNumber(text.trim().replaceAll(" ", "").replaceAll(",", ".")) { case some(value) => value, case none => -1 }
 
-fn twoDigits(n: number): string = n < 10 ? `0${n}` : `${n}`
+fn twoDigits(value: number): string = value < 10 ? `0${value}` : `${value}`
 
 // 150050 hellers → "1 500,50 Kč". The PDF writes money with src/utils/format.ts's `kc`: keep the two alike.
 fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(hellers) % 100)} Kč`
@@ -116,17 +116,17 @@ fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "d
 // A price field's text for a saved price: "1500" or "1500,50".
 fn priceText(hellers: number): string = hellers % 100 == 0 ? `${hellers / 100}` : formatDecimal(hellers, 2).replaceAll(".", ",")
 
-fn itemFilled(d: DraftItem): bool = d.description.trim() != "" or d.price.trim() != ""
+fn itemFilled(draft: DraftItem): bool = draft.description.trim() != "" or draft.price.trim() != ""
 
-fn itemValid(d: DraftItem): bool = d.description.trim() != "" and amount(d.quantity) > 0 and amount(d.price) >= 0
+fn itemValid(draft: DraftItem): bool = draft.description.trim() != "" and amount(draft.quantity) > 0 and amount(draft.price) >= 0
 
-fn itemHellers(d: DraftItem): number = itemValid(d) ? round(amount(d.quantity) * round(amount(d.price) * 100)) : 0
+fn itemHellers(draft: DraftItem): number = itemValid(draft) ? round(amount(draft.quantity) * round(amount(draft.price) * 100)) : 0
 
-fn draftTotal(ds: DraftItem[]): number = sum(ds.map(d => itemHellers(d)))
+fn draftTotal(drafts: DraftItem[]): number = sum(drafts.map(draft => itemHellers(draft)))
 
-fn toItem(d: DraftItem): Item = Item(description=d.description.trim(), quantity=amount(d.quantity), unitPrice=round(amount(d.price) * 100))
+fn toItem(draft: DraftItem): Item = Item(description=draft.description.trim(), quantity=amount(draft.quantity), unitPrice=round(amount(draft.price) * 100))
 
-fn toDraft(i: Item, key: number): DraftItem = DraftItem(key=key, description=i.description, quantity=`${i.quantity}`, price=priceText(i.unitPrice))
+fn toDraft(item: Item, key: number): DraftItem = DraftItem(key=key, description=item.description, quantity=`${item.quantity}`, price=priceText(item.unitPrice))
 
 // "2026-11-25" → "25. 11. 2026". The PDF uses src/utils/format.ts's `czDate`: keep the two alike.
 fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. ${amount(iso.slice(5, 7))}. ${iso.slice(0, 4)}`
@@ -135,9 +135,9 @@ fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
 
 fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="")
 
-fn invoiceOf(xs: Invoice[], id: string): Invoice = match first(xs.filter(x => x.id == id)) { case some(x) => x, case none => noInvoice() }
+fn invoiceOf(invoices: Invoice[], id: string): Invoice = match first(invoices.filter(invoice => invoice.id == id)) { case some(invoice) => invoice, case none => noInvoice() }
 
-fn invoiceFound(xs: Invoice[], id: string): bool = xs.filter(x => x.id == id).length > 0
+fn invoiceFound(invoices: Invoice[], id: string): bool = invoices.filter(invoice => invoice.id == id).length > 0
 
 // "IČO 28888286 · DIČ CZ28888286", leaving out what's empty.
-fn idLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.dic == "" ? "" : `DIČ ${c.dic}`].filter(p => p != "").join(" · ")
+fn idLine(client: Client): string = [client.ico == "" ? "" : `IČO ${client.ico}`, client.dic == "" ? "" : `DIČ ${client.dic}`].filter(part => part != "").join(" · ")

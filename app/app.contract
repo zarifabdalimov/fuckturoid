@@ -55,7 +55,7 @@ component App
   mutation invoicePaidSaved as shape Reply refreshes invoices
   mutation invoiceRemoved as shape Reply refreshes invoices
   mutation pdfMade as shape FileReply then afterPdf
-  derive pdfPath = match pdfMade { case some(r) => r.ok ? r.path : "", case none => "" }
+  derive pdfPath = match pdfMade { case some(answer) => answer.ok ? answer.path : "", case none => "" }
   // The invoice the detail's Delete asks about.
   state aimedInvoice = ""
 
@@ -65,7 +65,7 @@ component App
   mutation clientRemoved as shape Reply refreshes clients
   derive cAres = reply(clientLooked)
   state query = ""
-  derive shown = clients.filter(c => matches(c, query))
+  derive shown = clients.filter(client => matches(client, query))
   // The client the detail's Delete asks about.
   state aimed = ""
   // The client sheet's drafts; cId is "" for a new client. They live here, not in
@@ -101,10 +101,10 @@ component App
     if canFinish
       onboarded = true
       nav = back(nav)
-  action editIco(v: string)
-    ico = v.trim()
-    if icoValid(v.trim()) and not pending(looked)
-      send looked = lookupIco(v.trim())
+  action editIco(value: string)
+    ico = value.trim()
+    if icoValid(value.trim()) and not pending(looked)
+      send looked = lookupIco(value.trim())
   action lookup
     if icoValid(ico) and not pending(looked)
       send looked = lookupIco(ico)
@@ -115,16 +115,16 @@ component App
       street = ares.street
       city = ares.city
       zip = ares.zip
-  action editName(v: string)
-    name = v
-  action editDic(v: string)
-    dic = v.trim().toUpperCase()
-  action editStreet(v: string)
-    street = v
-  action editCity(v: string)
-    city = v
-  action editZip(v: string)
-    zip = v
+  action editName(value: string)
+    name = value
+  action editDic(value: string)
+    dic = value.trim().toUpperCase()
+  action editStreet(value: string)
+    street = value
+  action editCity(value: string)
+    city = value
+  action editZip(value: string)
+    zip = value
 
   // Invoices. The sheet keeps its own drafts and hands over the finished invoice.
   action reloadInvoices
@@ -138,7 +138,7 @@ component App
     if not pending(invoiceSaved)
       send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email=""), issued, dueDays, items)
   action afterInvoiceSave
-    if match invoiceSaved { case some(r) => r.ok, case none => false }
+    if match invoiceSaved { case some(answer) => answer.ok, case none => false }
       if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
         nav = back(nav)
   // Share: the data module writes the PDF, then the share sheet offers it
@@ -160,8 +160,8 @@ component App
       nav = back(nav)
 
   // Clients.
-  action search(v: string)
-    query = v
+  action search(value: string)
+    query = value
   action reloadClients
     refresh clients
   action openAddClient
@@ -182,21 +182,21 @@ component App
     cEmail = ""
     cRefusal = ""
   action openEditClient(id: string)
-    let c = clientOf(clients, id)
-    cId = c.id
-    cName = c.name
-    cIco = c.ico
-    cDic = c.dic
-    cStreet = c.street
-    cCity = c.city
-    cZip = c.zip
-    cEmail = c.email
+    let client = clientOf(clients, id)
+    cId = client.id
+    cName = client.name
+    cIco = client.ico
+    cDic = client.dic
+    cStreet = client.street
+    cCity = client.city
+    cZip = client.zip
+    cEmail = client.email
     cRefusal = ""
     nav = push(nav, path("editClient", id))
-  action editCIco(v: string)
-    cIco = v.trim()
-    if icoValid(v.trim()) and not pending(clientLooked)
-      send clientLooked = lookupIco(v.trim())
+  action editCIco(value: string)
+    cIco = value.trim()
+    if icoValid(value.trim()) and not pending(clientLooked)
+      send clientLooked = lookupIco(value.trim())
   action lookupClient
     if icoValid(cIco) and not pending(clientLooked)
       send clientLooked = lookupIco(cIco)
@@ -207,24 +207,24 @@ component App
       cStreet = cAres.street
       cCity = cAres.city
       cZip = cAres.zip
-  action editCName(v: string)
-    cName = v
-  action editCDic(v: string)
-    cDic = v.trim().toUpperCase()
-  action editCStreet(v: string)
-    cStreet = v
-  action editCCity(v: string)
-    cCity = v
-  action editCZip(v: string)
-    cZip = v
-  action editCEmail(v: string)
-    cEmail = v.trim()
+  action editCName(value: string)
+    cName = value
+  action editCDic(value: string)
+    cDic = value.trim().toUpperCase()
+  action editCStreet(value: string)
+    cStreet = value
+  action editCCity(value: string)
+    cCity = value
+  action editCZip(value: string)
+    cZip = value
+  action editCEmail(value: string)
+    cEmail = value.trim()
   action saveClient
     if cSaveHint == ""
       send clientSaved = saveClient(cId, cName.trim(), cIco, cDic, cStreet.trim(), cCity.trim(), cZip.trim(), cEmail)
   // The sheet closes only on an ok reply; a refusal keeps it open, saying why.
   action afterClientSave
-    let refusal = match clientSaved { case some(r) => r.error, case none => "" }
+    let refusal = match clientSaved { case some(answer) => answer.error, case none => "" }
     cRefusal = refusal
     if refusal == "" and (top(nav).name == "newClient" or top(nav).name == "editClient")
       nav = back(nav)
@@ -257,44 +257,44 @@ component App
     main navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow testId="app" width="100%" height="100%"
       display="flex" flex-direction="column"
       column flex=1 min-height=0 position="relative"
-        for t in nav.tabs key=t.name
-          column role="tabpanel" id=`panel-${t.name}` position="absolute" inset=0
-            for e in t.stack key=e.id
-              if e.name == "invoices"
+        for tab in nav.tabs key=tab.name
+          column role="tabpanel" id=`panel-${tab.name}` position="absolute" inset=0
+            for entry in tab.stack key=entry.id
+              if entry.name == "invoices"
                 if onboarded
-                  InvoiceList(route=e.id, invoices=invoices, hasClients=(clients.length > 0), today=today,
+                  InvoiceList(route=entry.id, invoices=invoices, hasClients=(clients.length > 0), today=today,
                     loading=pending(invoices), broke=failed(invoices),
                     openDetails=start, add=openAddInvoice, addClient=goAddClient, reload=reloadInvoices)
                 else
-                  Welcome(route=e.id, start=start)
-              if e.name == "details"
-                Details(route=e.id, onboarded=onboarded, canFinish=canFinish,
+                  Welcome(route=entry.id, start=start)
+              if entry.name == "details"
+                Details(route=entry.id, onboarded=onboarded, canFinish=canFinish,
                   ico=ico, name=name, dic=dic, street=street, city=city, zip=zip,
                   ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
                   finish=finish, logout=askLogout, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
                   editStreet=editStreet, editCity=editCity, editZip=editZip)
-              if e.name == "invoice"
-                InvoiceDetail(route=e.id, id=e.params.id, invoices=invoices, today=today, loading=pending(invoices),
-                  edit=openEditInvoice(e.params.id), setPaid=setInvoicePaid(e.params.id),
-                  share=sharePdf(e.params.id), sharing=pending(pdfMade),
-                  askRemove=askRemoveInvoice(e.params.id), back=back)
-              if e.name == "newInvoice"
-                InvoiceForm(route=e.id, isNew=true, clients=clients, invoice=noInvoice(), today=today,
+              if entry.name == "invoice"
+                InvoiceDetail(route=entry.id, id=entry.params.id, invoices=invoices, today=today, loading=pending(invoices),
+                  edit=openEditInvoice(entry.params.id), setPaid=setInvoicePaid(entry.params.id),
+                  share=sharePdf(entry.params.id), sharing=pending(pdfMade),
+                  askRemove=askRemoveInvoice(entry.params.id), back=back)
+              if entry.name == "newInvoice"
+                InvoiceForm(route=entry.id, isNew=true, clients=clients, invoice=noInvoice(), today=today,
                   saving=pending(invoiceSaved), cancel=back, save=saveInvoice(""))
-              if e.name == "editInvoice"
+              if entry.name == "editInvoice"
                 // Made once the invoice has loaded, so its drafts start from it.
-                for inv in invoices.filter(x => x.id == e.params.id) key=inv.id
-                  InvoiceForm(route=e.id, isNew=false, clients=clients, invoice=inv, today=today,
-                    saving=pending(invoiceSaved), cancel=back, save=saveInvoice(e.params.id))
-              if e.name == "clients"
-                ClientList(route=e.id, clients=clients, shown=shown, query=query,
+                for inv in invoices.filter(candidate => candidate.id == entry.params.id) key=inv.id
+                  InvoiceForm(route=entry.id, isNew=false, clients=clients, invoice=inv, today=today,
+                    saving=pending(invoiceSaved), cancel=back, save=saveInvoice(entry.params.id))
+              if entry.name == "clients"
+                ClientList(route=entry.id, clients=clients, shown=shown, query=query,
                   loading=pending(clients), broke=failed(clients),
                   search=search, reload=reloadClients, add=openAddClient, remove=removeClient)
-              if e.name == "client"
-                ClientDetail(route=e.id, id=e.params.id, clients=clients, loading=pending(clients),
-                  edit=openEditClient(e.params.id), askRemove=askRemoveClient(e.params.id), back=back)
-              if e.name == "newClient" or e.name == "editClient"
-                ClientForm(route=e.id, isNew=(e.name == "newClient"),
+              if entry.name == "client"
+                ClientDetail(route=entry.id, id=entry.params.id, clients=clients, loading=pending(clients),
+                  edit=openEditClient(entry.params.id), askRemove=askRemoveClient(entry.params.id), back=back)
+              if entry.name == "newClient" or entry.name == "editClient"
+                ClientForm(route=entry.id, isNew=(entry.name == "newClient"),
                   ico=cIco, name=cName, dic=cDic, street=cStreet, city=cCity, zip=cZip, email=cEmail,
                   refusal=cRefusal, ares=cAres, lookingUp=pending(clientLooked), lookupFailed=failed(clientLooked),
                   saveHint=cSaveHint, canSave=(cSaveHint == ""),
