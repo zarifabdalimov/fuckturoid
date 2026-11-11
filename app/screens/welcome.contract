@@ -1,0 +1,16 @@
+// The landing screen, shown at first launch until onboarding is done.
+component Welcome
+  props
+    route: number
+    start: action
+  view
+    column navigationKey=`${route}` navigationBar="none" position="absolute" inset=0 testId="welcome"
+      scroll flex=1 min-height=0
+        column min-height="100%" box-sizing="border-box" padding=32 gap=20
+          justify-content="center" align-items="center" text-align="center"
+          image "symbol:document" font="-exact-large-title" color="AccentColor" aria-hidden=true
+          text "Fuckturoid" role="heading" aria-level=1 font="-exact-large-title" font-weight=800
+          text "Invoicing without the fuckery." font="-exact-title2" font-weight=600
+          text "Bill clients from your phone, get paid, and give zero f*cks about paperwork." color="-exact-secondary-label" max-width="22rem"
+      button press=start buttonStyle="filled" margin=24 testId="get-started"
+        text "Get started"

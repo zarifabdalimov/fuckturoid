@@ -1,0 +1,174 @@
+// The Clients tab: the list, a client's detail, and the add/edit sheet.
+use EmptyState from "exact:content"
+use Client, clientOf, clientLine, found from "../model.contract"
+use IcoSection from "./ico-section.contract"
+
+component ClientList
+  props
+    route: number
+    clients: Client[]
+    shown: Client[]
+    query: string
+    loading: bool
+    broke: bool
+    search: action
+    reload: action
+    add: action
+    remove: action
+  view
+    column navigationKey=`${route}` navigationScroll="clients-list" position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" flex-wrap="wrap" align-items="center" gap=8
+        text "Clients" role="heading" aria-level=1 flex=1
+        button press=add aria-label="Add Client" testId="add-client"
+          image "symbol:add"
+        if clients.length > 0
+          input type="search" value=query input=search placeholder="Search" aria-label="Search Clients"
+            testId="search-clients" width="100%"
+      // In place of the list: a failed read, no clients, no match.
+      if broke
+        EmptyState(symbol="symbol:alert", title="Can't Open Clients", message="Something went wrong reading them.")
+          button press=reload testId="clients-retry"
+            text "Try Again"
+      else if clients.length == 0 and not loading
+        EmptyState(symbol="symbol:people", title="No Clients Yet", message="Add the people and companies you invoice. An IČO fills in the rest from ARES.")
+          button press=add testId="empty-add-client"
+            text "Add Client"
+      else if shown.length == 0 and not loading
+        EmptyState(symbol="symbol:search", title=`No Results for “${query.trim()}”`, message="Check the spelling or try a new search.")
+      else
+        list id="clients-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+          section
+            // A row pushes its detail; a swipe deletes at once, as iOS lists do.
+            for c in shown key=c.id
+              link href=path("client", c.id) delete=remove(c.id) testId=`client-${c.id}`
+                column flex=1 min-width=0 gap=2 padding-top=4 padding-bottom=4
+                  text c.name
+                  if clientLine(c) != ""
+                    text clientLine(c) font="-exact-subheadline" color="-exact-secondary-label"
+                image "symbol:forward-chevron"
+
+component ClientDetail
+  props
+    route: number
+    id: string
+    clients: Client[]
+    loading: bool
+    edit: action
+    askRemove: action
+    back: action
+  view
+    column navigationKey=`${route}` navigationScroll=`client-${route}` position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" align-items="center"
+        text (found(clients, id) or loading ? clientOf(clients, id).name : "Not Found")
+          role="heading" aria-level=2 testId="client-title"
+        if found(clients, id)
+          button press=edit testId="edit-client"
+            text "Edit"
+      if found(clients, id) or loading
+        list id=`client-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+          for c in clients.filter(x => x.id == id) key=c.id
+            section
+              row
+                text "IČO"
+                text (c.ico == "" ? "None" : c.ico) testId="client-ico"
+              row
+                text "DIČ"
+                text (c.dic == "" ? "Not a VAT payer" : c.dic) testId="client-dic"
+            section
+              header
+                text "Address"
+              row padding-top=10 padding-bottom=10
+                column flex=1 min-width=0 gap=2
+                  if c.street == "" and c.city == "" and c.zip == ""
+                    text "No address" color="-exact-secondary-label"
+                  if c.street != ""
+                    text c.street testId="client-street"
+                  if c.zip != "" or c.city != ""
+                    text [c.zip, c.city].filter(p => p != "").join(" ") testId="client-city"
+            section
+              header
+                text "Email"
+              row
+                text (c.email == "" ? "No email" : c.email) color=(c.email == "" ? "-exact-secondary-label" : "-exact-label") testId="client-email"
+            section
+              button press=askRemove destructive=true testId="delete-client"
+                text "Delete Client"
+      else
+        EmptyState(symbol="symbol:alert", title="No such client", message="They may have been deleted.")
+          button press=back buttonStyle="filled" testId="missing-back"
+            text "Back to Clients"
+
+// The add/edit sheet. Its drafts live in the root, which fills them before opening it.
+component ClientForm
+  props
+    route: number
+    isNew: bool
+    ico: string
+    name: string
+    dic: string
+    street: string
+    city: string
+    zip: string
+    email: string
+    refusal: string
+    icoHint: string
+    icoRed: bool
+    lookingUp: bool
+    saveHint: string
+    canSave: bool
+    cancel: action
+    save: action
+    editIco: action
+    lookup: action
+    editName: action
+    editDic: action
+    editStreet: action
+    editCity: action
+    editZip: action
+    editEmail: action
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`client-form-${route}` position="absolute" inset=0
+      header display="flex" align-items="center" justify-content="space-between"
+        button id="back" press=cancel aria-label="Cancel" testId="client-cancel"
+          image "symbol:close"
+        text (isNew ? "New Client" : "Edit Client") role="heading"
+        button press=save buttonStyle="bordered-prominent" aria-label="Save" testId="client-save"
+          disabled=(not canSave)
+          image "symbol:checkmark"
+      list id=`client-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        IcoSection(prefix="c-", label="Client IČO", ico=ico, hint=icoHint, red=icoRed, busy=lookingUp, autofocus=isNew, edit=editIco, lookup=lookup)
+        section
+          row
+            column flex=1 min-width=0 gap=4
+              input value=name input=editName submit=save placeholder="Name or company" aria-label="Client name"
+                autocapitalize="words" aria-invalid=(refusal != "") testId="c-name"
+              if refusal != ""
+                text refusal font="-exact-footnote" color="-exact-system-red" testId="c-error"
+          row
+            text "DIČ"
+            input value=dic input=editDic placeholder="CZ12345678" aria-label="Client DIČ"
+              autocapitalize="characters" testId="c-dic" flex=1 min-width=0 text-align="end"
+          footer
+            text saveHint testId="c-save-hint"
+        section
+          header
+            text "Address"
+          row
+            input value=street input=editStreet placeholder="Street and number" aria-label="Client street"
+              testId="c-street" flex=1 min-width=0
+          row
+            input value=city input=editCity placeholder="City" aria-label="Client city"
+              testId="c-city" flex=1 min-width=0
+          row
+            input value=zip input=editZip placeholder="ZIP" aria-label="Client ZIP"
+              inputmode="numeric" testId="c-zip" flex=1 min-width=0
+        section
+          header
+            text "Email"
+          row
+            input type="email" value=email input=editEmail placeholder="Where invoices go" aria-label="Client email"
+              autocapitalize="none" testId="c-email" flex=1 min-width=0
+          footer
+            text "Optional. Invoices can be sent here."

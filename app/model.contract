@@ -1,0 +1,53 @@
+// The app's data shapes and the pure functions over them.
+
+// An ARES answer for one IČO (app.ts lookupIco).
+shape Company
+  ok: bool
+  error: string
+  ico: string
+  name: string
+  dic: string
+  street: string
+  city: string
+  zip: string
+
+shape Client
+  id: string
+  name: string
+  ico: string
+  dic: string
+  street: string
+  city: string
+  zip: string
+  email: string
+
+// A write's reply: ok, or the reason it was refused.
+shape Reply
+  ok: bool
+  error: string
+
+// One digit of an IČO, or -100 for anything else so the checksum fails.
+fn digit(s: string, i: number): number = match parseNumber(s.slice(i, i + 1)) { case some(n) => n, case none => -100 }
+
+fn icoSum(s: string): number = digit(s, 0) * 8 + digit(s, 1) * 7 + digit(s, 2) * 6 + digit(s, 3) * 5 + digit(s, 4) * 4 + digit(s, 5) * 3 + digit(s, 6) * 2
+
+fn icoCheck(s: string): number = icoSum(s) % 11 == 0 ? 1 : icoSum(s) % 11 == 1 ? 0 : 11 - icoSum(s) % 11
+
+fn icoValid(s: string): bool = s.length == 8 and icoSum(s) >= 0 and digit(s, 7) == icoCheck(s)
+
+fn icoBad(s: string): bool = s != "" and not icoValid(s)
+
+// What an IČO field says under it, for your details and a client's alike.
+// rIco/rOk/rError/rName are the last ARES reply; it counts only for the IČO it answered.
+fn icoMessage(ico: string, busy: bool, broke: bool, rIco: string, rOk: bool, rError: string, rName: string): string = ico == "" ? "" : ico.length != 8 ? "An IČO has 8 digits." : not icoValid(ico) ? "This isn't a valid IČO: its check digit doesn't match." : busy ? "Looking it up in ARES…" : broke ? "Couldn't reach ARES. Check your connection and try again." : rIco == ico and rError != "" ? rError : rIco == ico and rOk ? `Filled in from ARES: ${rName}` : ""
+
+fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="")
+
+fn clientOf(cs: Client[], id: string): Client = match first(cs.filter(c => c.id == id)) { case some(c) => c, case none => noClient() }
+
+fn found(cs: Client[], id: string): bool = cs.filter(c => c.id == id).length > 0
+
+fn matches(c: Client, q: string): bool = c.name.toLowerCase().includes(q.trim().toLowerCase()) or c.ico.includes(q.trim()) or c.city.toLowerCase().includes(q.trim().toLowerCase())
+
+// "IČO 28888286 · Praha 8", leaving out what's empty.
+fn clientLine(c: Client): string = [c.ico == "" ? "" : `IČO ${c.ico}`, c.city].filter(p => p != "").join(" · ")

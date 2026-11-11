@@ -21,6 +21,13 @@ bun exact.mjs test ios       # run app.test.contract
 bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 ```
 
+## Layout
+
+- `app/app.contract`: the root: all state, data, actions, routes and the tab bar
+- `app/model.contract`: shapes (Client, Company, Reply) and pure functions (IČO checksum…)
+- `app/screens/*.contract`: one file per screen; each takes its data and actions as props
+- `app/app.ts`: the data module: ARES lookup and the clients file
+
 ## Features
 
 - **Your details:** name, IČO, DIČ and address, kept on the device. A valid IČO fills the

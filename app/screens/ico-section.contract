@@ -1,0 +1,26 @@
+// The IČO field with its ARES lookup, a section of a grouped form.
+// Your details and the client sheet both use it; `prefix` keeps their test ids apart.
+use icoValid from "../model.contract"
+
+component IcoSection
+  props
+    prefix: string
+    label: string
+    ico: string
+    hint: string
+    red: bool
+    busy: bool
+    autofocus: bool
+    edit: action
+    lookup: action
+  view
+    section
+      row
+        text "IČO"
+        input value=ico input=edit submit=lookup placeholder="12345678" aria-label=label
+          inputmode="numeric" maxlength=8 autofocus=autofocus testId=`${prefix}ico` flex=1 min-width=0 text-align="end"
+      row
+        button press=lookup disabled=(not icoValid(ico) or busy) testId=`${prefix}lookup`
+          text (busy ? "Looking up…" : "Fill in from ARES")
+      footer
+        text hint color=(red ? "-exact-system-red" : "-exact-secondary-label") testId=`${prefix}ico-hint`

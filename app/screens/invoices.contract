@@ -1,0 +1,16 @@
+// The Invoices tab. Empty for now: making invoices comes next.
+use EmptyState from "exact:content"
+
+component Invoices
+  props
+    route: number
+    name: string
+    openDetails: action
+  view
+    column navigationKey=`${route}` position="absolute" inset=0 display="flex" flex-direction="column"
+      header display="flex" align-items="center"
+        text "Invoices" role="heading" aria-level=1 flex=1
+        button press=openDetails aria-label="Your details" testId="open-details"
+          image "symbol:person"
+      column flex=1 min-height=0 testId="home"
+        EmptyState(symbol="symbol:document", title="No invoices yet", message=`Invoices from ${name} will show up here. Making them is coming next.`)

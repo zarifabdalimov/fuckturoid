@@ -1,0 +1,58 @@
+// Your details: the supplier block of every invoice. During onboarding it has
+// a Done that waits for a name; later it is opened from Invoices to edit.
+use IcoSection from "./ico-section.contract"
+
+component Details
+  props
+    route: number
+    onboarded: bool
+    canFinish: bool
+    ico: string
+    name: string
+    dic: string
+    street: string
+    city: string
+    zip: string
+    icoHint: string
+    icoRed: bool
+    lookingUp: bool
+    finish: action
+    editIco: action
+    lookup: action
+    editName: action
+    editDic: action
+    editStreet: action
+    editCity: action
+    editZip: action
+  view
+    column navigationKey=`${route}` navigationScroll="form" position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" align-items="center"
+        text "Your details" role="heading" aria-level=1 flex=1
+        if not onboarded
+          button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
+            text "Done"
+      list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        IcoSection(prefix="", label="IČO", ico=ico, hint=icoHint, red=icoRed, busy=lookingUp, autofocus=false, edit=editIco, lookup=lookup)
+        section
+          row
+            input value=name input=editName placeholder="Name or company" aria-label="Name"
+              autocomplete="organization" autocapitalize="words" testId="name" flex=1 min-width=0
+          row
+            text "DIČ"
+            input value=dic input=editDic placeholder="CZ12345678" aria-label="DIČ"
+              autocapitalize="characters" testId="dic" flex=1 min-width=0 text-align="end"
+          footer
+            text "Leave DIČ empty if you aren't registered for VAT."
+        section
+          row
+            input value=street input=editStreet placeholder="Street and number" aria-label="Street"
+              autocomplete="street-address" testId="street" flex=1 min-width=0
+          row
+            input value=city input=editCity placeholder="City" aria-label="City"
+              autocomplete="address-level2" testId="city" flex=1 min-width=0
+          row
+            input value=zip input=editZip placeholder="ZIP" aria-label="ZIP"
+              autocomplete="postal-code" inputmode="numeric" testId="zip" flex=1 min-width=0
+          footer
+            text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
