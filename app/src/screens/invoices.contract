@@ -1,6 +1,6 @@
 use Badge, EmptyState from "exact:content"
 use BankAccount, Client, Invoice, DraftItem, money, currencySymbol, accountFor, clientOf, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
-use blankItem, draftTotal, toItem, toDraft from "../model/model.contract"
+use blankItem, draftTotal, toItem, toDraft, lastYear, amountsLine, invoiceCount from "../model/model.contract"
 use CurrencyChoice from "./currency-choice.contract"
 
 component InvoiceList
@@ -39,6 +39,7 @@ component InvoiceList
             text "New Invoice"
       else
         list id="invoices-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="home"
+          InvoiceStats(invoices=lastYear(invoices, today), today=today)
           section
             for inv in invoices key=inv.id
               link href=path("invoice", inv.id) testId=`invoice-${inv.id}`
@@ -256,3 +257,37 @@ component InvoiceForm
           section
             footer
               text saveHint testId="i-save-hint"
+
+component InvoiceStats
+  props
+    invoices: Invoice[]
+    today: string
+  derive unpaid = invoices.filter(invoice => not invoice.paid)
+  derive paid = invoices.filter(invoice => invoice.paid)
+  derive late = unpaid.filter(invoice => overdue(invoice, today)).length
+  view
+    section
+      row align-items="flex-start" gap=12 padding-top=8 padding-bottom=8
+        Stat(label="Unpaid", count=unpaid.length, amounts=amountsLine(unpaid),
+          note=(late == 0 ? "" : `${late} overdue`), testPrefix="stat-unpaid")
+        Stat(label="Paid", count=paid.length, amounts=amountsLine(paid), note="", testPrefix="stat-paid")
+        Stat(label="All", count=invoices.length, amounts=amountsLine(invoices), note="", testPrefix="stat-all")
+      footer
+        text "Last 12 months, by issue date."
+
+component Stat
+  props
+    label: string
+    count: number
+    amounts: string
+    note: string
+    testPrefix: string
+  view
+    column flex=1 min-width=0 gap=2
+      text label font="-exact-footnote" font-weight=600 color="-exact-secondary-label"
+      text `${count}` font="-exact-title2" font-weight=700 color="-exact-label" font-variant-numeric="tabular-nums"
+        aria-label=invoiceCount(count) testId=`${testPrefix}-count`
+      text amounts font="-exact-caption1" color="-exact-secondary-label" font-variant-numeric="tabular-nums"
+        testId=`${testPrefix}-amount`
+      if note != ""
+        text note font="-exact-caption1" font-weight=600 color="-exact-system-red" testId=`${testPrefix}-note`

@@ -159,3 +159,13 @@ shape Created
   ok: bool
   error: string
   id: string
+
+fn yearBefore(iso: string): string = `${amount(iso.slice(0, 4)) - 1}${iso.slice(4)}`
+
+fn lastYear(invoices: Invoice[], today: string): Invoice[] = invoices.filter(invoice => invoice.issued > yearBefore(today) and invoice.issued <= today)
+
+fn sumIn(invoices: Invoice[], currency: string): number = sum(invoices.filter(invoice => invoice.currency == currency).map(invoice => invoice.total))
+
+fn amountsLine(invoices: Invoice[]): string = invoices.length == 0 ? money(0, "CZK") : ["CZK", "EUR", "USD", "GBP"].filter(currency => invoices.filter(invoice => invoice.currency == currency).length > 0).map(currency => money(sumIn(invoices, currency), currency)).join(" · ")
+
+fn invoiceCount(count: number): string = count == 1 ? "1 invoice" : `${count} invoices`

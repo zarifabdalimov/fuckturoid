@@ -76,6 +76,8 @@ reads them without running any code. Contract can't import TypeScript, so `kc` a
   rest from [ARES](https://ares.gov.cz).
 - **Clients:** a searchable list kept in a file on the device; add or edit in a sheet with
   the same ARES autofill, refused on a duplicate IČO; swipe or Delete (which asks) removes one.
+- **Stats** on the Invoices screen: unpaid (with how many are overdue), paid and all
+  invoices of the last 12 months by issue date, counted and summed per currency.
 - **Invoices:** numbered per year (2026-0001), a client and your details copied in when
   saved, lines with quantity × price in Kč, due in 7/14/30 days; Paid and Overdue badges,
   a Paid switch, edit, and delete (which asks).
