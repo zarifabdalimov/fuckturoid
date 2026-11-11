@@ -7,7 +7,7 @@ component Welcome
       color-scheme="dark" status-bar-style="light-content" background-color="hero.base"
       background-image="radial-gradient(120% 60% at 50% 0%, var(--hero.glow) 0%, transparent 70%), radial-gradient(110% 60% at 50% 100%, var(--hero.haze) 0%, transparent 70%), linear-gradient(180deg, var(--hero.top) 0%, var(--hero.base) 100%)"
       scroll flex=1 min-height=0
-        column min-height="100%" box-sizing="border-box" padding="56px 28px 24px" justify-content="flex-end"
+        column min-height="100%" box-sizing="border-box" padding="72px 28px 24px" justify-content="flex-start"
           column width=72 height=72 border-radius=20 background-color="hero.glass" align-self="center"
             align-items="center" justify-content="center"
             image "symbol:document" font="-exact-title1" color="hero.ink" aria-hidden=true
