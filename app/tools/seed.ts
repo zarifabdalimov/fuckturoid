@@ -116,8 +116,9 @@ const settings: Record<string, unknown> = {
   city: supplier.city,
   zip: supplier.zip,
 };
+const preferences = join(container, 'Library', 'Preferences', bundleId);
 for (const [key, value] of Object.entries(settings)) {
-  simctl('spawn', device, 'defaults', 'write', bundleId, `exact.state.${key}`, '-string', JSON.stringify(value));
+  simctl('spawn', device, 'defaults', 'write', preferences, `exact.state.${key}`, '-string', JSON.stringify(value));
 }
 
 simctl('launch', device, bundleId);
