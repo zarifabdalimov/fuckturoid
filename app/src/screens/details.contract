@@ -1,4 +1,4 @@
-use Company, accountProblem from "../model/model.contract"
+use BankAccount, Company from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
 
 component Details
@@ -12,7 +12,7 @@ component Details
     street: string
     city: string
     zip: string
-    account: string
+    bankAccounts: BankAccount[]
     ares: Company
     lookingUp: bool
     lookupFailed: bool
@@ -25,7 +25,8 @@ component Details
     editStreet: action
     editCity: action
     editZip: action
-    editAccount: action
+    addBankAccount: action
+    removeBankAccount: action
   view
     column navigationKey=`${route}` navigationScroll="form" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -61,13 +62,16 @@ component Details
             text (onboarded or canFinish ? "These details appear on every invoice you send." : "Add your name to finish.") testId="finish-hint"
         section
           header
-            text "Bank account"
-          row
-            input value=account input=editAccount placeholder="123456789/0800" aria-label="Bank account"
-              autocapitalize="none" testId="account" flex=1 min-width=0
+            text "Bank accounts"
+          for entry in bankAccounts key=entry.id
+            link href=path("editBankAccount", entry.id) delete=removeBankAccount(entry.id) testId=`bank-${entry.id}`
+              text entry.account flex=1 min-width=0
+              text entry.currency color="-exact-secondary-label"
+              image "symbol:forward-chevron"
+          button press=addBankAccount testId="add-bank-account"
+            text "Add Bank Account"
           footer
-            text (accountProblem(account) != "" ? accountProblem(account) : "Clients pay to this account. It goes on every invoice, with its IBAN.")
-              color=(accountProblem(account) != "" ? "-exact-system-red" : "-exact-secondary-label") testId="account-hint"
+            text "Clients pay into the account in their invoice's currency. Each goes on the invoice with its IBAN."
         if onboarded
           section
             button press=logout destructive=true testId="logout"

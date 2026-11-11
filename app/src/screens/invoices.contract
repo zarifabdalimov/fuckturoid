@@ -1,6 +1,7 @@
 use Badge, EmptyState from "exact:content"
-use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
+use BankAccount, Client, Invoice, DraftItem, money, currencySymbol, accountFor, clientOf, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model/model.contract"
 use blankItem, draftTotal, toItem, toDraft from "../model/model.contract"
+use CurrencyChoice from "./currency-choice.contract"
 
 component InvoiceList
   props
@@ -46,7 +47,7 @@ component InvoiceList
                   text (inv.paid ? `${inv.number} · Paid ${czDate(inv.paidOn)}` : `${inv.number} · Due ${czDate(inv.due)}`)
                     font="-exact-subheadline" color="-exact-secondary-label"
                 column align-items="flex-end" gap=4
-                  text kc(inv.total) font-variant-numeric="tabular-nums" testId=`invoice-total-${inv.id}`
+                  text money(inv.total, inv.currency) font-variant-numeric="tabular-nums" testId=`invoice-total-${inv.id}`
                   if inv.paid
                     Badge(label="Paid", tint=some("-exact-system-green"))
                   else if overdue(inv, today)
@@ -102,7 +103,7 @@ component InvoiceDetail
             section
               row
                 text "Total"
-                text kc(inv.total) font="-exact-title2" font-weight=700 color="-exact-label" font-variant-numeric="tabular-nums" testId="invoice-total"
+                text money(inv.total, inv.currency) font="-exact-title2" font-weight=700 color="-exact-label" font-variant-numeric="tabular-nums" testId="invoice-total"
               row
                 text "Paid"
                 input type="checkbox" switch checked=inv.paid change=setPaid aria-label="Paid" testId="paid-switch"
@@ -117,8 +118,8 @@ component InvoiceDetail
                 row padding-top=6 padding-bottom=6
                   column flex=1 min-width=0 gap=2
                     text line.description
-                    text `${line.quantity} × ${kc(line.unitPrice)}` font="-exact-subheadline" color="-exact-secondary-label"
-                  text kc(round(line.quantity * line.unitPrice)) font-variant-numeric="tabular-nums"
+                    text `${line.quantity} × ${money(line.unitPrice, inv.currency)}` font="-exact-subheadline" color="-exact-secondary-label"
+                  text money(round(line.quantity * line.unitPrice), inv.currency) font-variant-numeric="tabular-nums"
             section
               row
                 text "Issued"
@@ -145,21 +146,28 @@ component InvoiceForm
     isNew: bool
     clients: Client[]
     invoice: Invoice
+    bankAccounts: BankAccount[]
     today: string
     saving: bool
     cancel: action
     save: action
   state clientId = isNew ? (clients.length == 1 ? match clients.at(0) { case some(client) => client.id, case none => "" } : "") : invoice.client.id
+  state currency = isNew ? (clients.length == 1 ? match clients.at(0) { case some(client) => client.currency, case none => "CZK" } : "CZK") : invoice.currency
   state issued = isNew ? today : invoice.issued
   state dueDays = isNew ? 14 : invoice.dueDays
   state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((line, position) => toDraft(line, position))
   state nextKey = invoice.items.length + 1
   derive lines = items.filter(draft => itemFilled(draft))
   derive total = draftTotal(items)
+  derive payTo = accountFor(bankAccounts, currency)
   derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(draft => not itemValid(draft)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
 
   action pickClient(value: string)
     clientId = value
+    if value != ""
+      currency = clientOf(clients, value).currency
+  action pickCurrency(value: string)
+    currency = value
   action setIssued(value: string)
     issued = value
   action setDueDays(days: number)
@@ -178,7 +186,7 @@ component InvoiceForm
       items = items.filter((draft, position) => position != index)
   action submit
     if saveHint == ""
-      save(clientId, issued, dueDays, lines.map(draft => toItem(draft)))
+      save(clientId, issued, dueDays, lines.map(draft => toItem(draft)), currency)
 
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`invoice-form-${route}` position="absolute" inset=0
@@ -199,6 +207,14 @@ component InvoiceForm
           row
             text "Issued"
             input type="date" value=issued change=setIssued aria-label="Issued" testId="i-issued"
+        section
+          header
+            text "Currency"
+          row
+            CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="i-currency")
+          footer
+            text (payTo != "" ? `Paid to ${payTo}.` : `You have no ${currency} bank account yet. Add one in Your details, or the invoice goes out without one.`)
+              color=(payTo != "" ? "-exact-secondary-label" : "-exact-system-orange") testId="i-pay-to"
         section
           header
             text "Due"
@@ -222,16 +238,16 @@ component InvoiceForm
                   text "×" color="-exact-secondary-label"
                   input value=draft.price input=editPrice(index) inputmode="decimal" placeholder="Price" aria-label=`Item ${index + 1} price`
                     flex=1 min-width=0 text-align="end" testId=`item-price-${index}`
-                  text "Kč" color="-exact-secondary-label"
+                  text currencySymbol(currency) color="-exact-secondary-label"
                 if itemFilled(draft) and not itemValid(draft)
                   text "Add a description, a quantity above 0 and a price." font="-exact-footnote" color="-exact-system-red"
                 else
-                  text kc(itemHellers(draft)) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
+                  text money(itemHellers(draft), currency) font="-exact-subheadline" color="-exact-secondary-label" align-self="flex-end"
                     font-variant-numeric="tabular-nums" testId=`item-amount-${index}`
           button press=addItem testId="add-line"
             text "Add Item"
           footer
-            text `Total ${kc(total)}` font-weight=600 font-variant-numeric="tabular-nums" testId="i-total"
+            text `Total ${money(total, currency)}` font-weight=600 font-variant-numeric="tabular-nums" testId="i-total"
         if saveHint != ""
           section
             footer

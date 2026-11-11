@@ -8,7 +8,16 @@ export type { Found, Invoice, InvoiceInput, Item, Party } from './types.ts';
 export { addDays, invoiceTotal, nextNumber } from './utils.ts';
 
 export function withDefaults(all: Invoice[]): Invoice[] {
-  return R.map(all, (invoice) => ({ ...invoice, account: invoice.account ?? '' }));
+  return R.map(all, (invoice) => {
+    const currency = invoice.currency ?? 'CZK';
+    return {
+      ...invoice,
+      account: invoice.account ?? '',
+      currency,
+      client: { ...invoice.client, currency: invoice.client.currency ?? currency },
+      supplier: { ...invoice.supplier, currency: invoice.supplier.currency ?? currency },
+    };
+  });
 }
 
 export function sortInvoices(all: Invoice[]): Invoice[] {

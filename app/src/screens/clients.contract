@@ -1,6 +1,7 @@
 use EmptyState from "exact:content"
 use Client, Company, clientOf, clientLine, found from "../model/model.contract"
 use IcoSection from "./ico-section.contract"
+use CurrencyChoice from "./currency-choice.contract"
 
 component ClientList
   props
@@ -73,6 +74,9 @@ component ClientDetail
               row
                 text "DIČ"
                 text (client.dic == "" ? "Not a VAT payer" : client.dic) testId="client-dic"
+              row
+                text "Currency"
+                text client.currency testId="client-currency"
             section
               header
                 text "Address"
@@ -108,6 +112,7 @@ component ClientForm
     city: string
     zip: string
     email: string
+    currency: string
     refusal: string
     ares: Company
     lookingUp: bool
@@ -124,6 +129,7 @@ component ClientForm
     editCity: action
     editZip: action
     editEmail: action
+    pickCurrency: action
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`client-form-${route}` position="absolute" inset=0
       header display="flex" align-items="center" justify-content="space-between"
@@ -169,3 +175,10 @@ component ClientForm
               autocapitalize="none" testId="c-email" flex=1 min-width=0
           footer
             text "Optional. Invoices can be sent here."
+        section
+          header
+            text "Currency"
+          row
+            CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="c-currency")
+          footer
+            text "New invoices for this client start in this currency."

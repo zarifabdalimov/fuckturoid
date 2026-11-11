@@ -1,5 +1,5 @@
 import * as R from 'remeda';
-import { czDate, kc } from '../../utils/format.ts';
+import { czDate, money } from '../../utils/format.ts';
 import { COL_AMOUNT, COL_PRICE, COL_QTY, DESC_W, EXTRA_NAMES, MARGIN, PAGE_H, PAGE_W, RIGHT } from './preset.ts';
 import type { InvoiceForPdf } from './types.ts';
 import { literal, Page, party, quantity, tableHeader, wrap } from './utils.ts';
@@ -22,6 +22,7 @@ function pages(inv: InvoiceForPdf): Page[] {
   baseline = Math.min(left, right) - 14;
 
   const account = inv.account ?? '';
+  const currency = inv.currency ?? 'CZK';
   const iban = inv.iban ?? '';
   const bandHeight = iban ? 66 : 50;
   page.box(MARGIN, baseline - bandHeight + 12, RIGHT - MARGIN, bandHeight, 0.96);
@@ -58,15 +59,15 @@ function pages(inv: InvoiceForPdf): Page[] {
     }
     R.forEach(lines, (line, index) => page.text(line, MARGIN + 8, baseline - index * 13, 'F1', 10));
     page.textRight(quantity(item.quantity), COL_QTY, baseline, 'F1', 10);
-    page.textRight(kc(item.unitPrice), COL_PRICE, baseline, 'F1', 10);
-    page.textRight(kc(Math.round(item.quantity * item.unitPrice)), COL_AMOUNT - 8, baseline, 'F1', 10);
+    page.textRight(money(item.unitPrice, currency), COL_PRICE, baseline, 'F1', 10);
+    page.textRight(money(Math.round(item.quantity * item.unitPrice), currency), COL_AMOUNT - 8, baseline, 'F1', 10);
     page.rule(MARGIN, baseline - (lines.length - 1) * 13 - 7, RIGHT, 0.88);
     baseline -= height;
   }
 
   baseline -= 18;
   page.text('Celkem k úhradě', COL_PRICE - 120, baseline, 'F2', 12);
-  page.textRight(kc(inv.total), COL_AMOUNT - 8, baseline, 'F2', 16);
+  page.textRight(money(inv.total, currency), COL_AMOUNT - 8, baseline, 'F2', 16);
   baseline -= 30;
   if (!inv.supplier.dic) page.text('Dodavatel není plátcem DPH.', MARGIN, baseline, 'F1', 9, 0.45);
 

@@ -16,6 +16,7 @@ export type InvoiceForPdf = {
   items: { description: string; quantity: number; unitPrice: number }[];
   total: number;
   account?: string;
+  currency?: string;
   iban?: string;
 };
 

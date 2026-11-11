@@ -1,15 +1,18 @@
 use Company, Client, Item, Reply, FileReply, Invoice, Time, icoValid, reply, aresFound, clientOf, matches from "./src/model/model.contract"
-use invoiceOf, noInvoice from "./src/model/model.contract"
+use invoiceOf, noInvoice, BankAccount, accountFor, bankAccountOf from "./src/model/model.contract"
 use Welcome from "./src/screens/welcome.contract"
 use InvoiceList, InvoiceDetail, InvoiceForm from "./src/screens/invoices.contract"
 use Details from "./src/screens/details.contract"
 use ClientList, ClientDetail, ClientForm from "./src/screens/clients.contract"
 use Confirm from "./src/screens/confirm.contract"
 use TabBar from "./src/screens/tab-bar.contract"
+use BankAccountForm from "./src/screens/bank-account.contract"
 
 routes nav
   tab invoices "/"
     details "/details"
+    newBankAccount "/new-bank-account"
+    editBankAccount "/bank-accounts/:id"
     invoice "/invoices/:id"
     editInvoice "/invoices/:id/edit"
     newInvoice "/new-invoice"
@@ -26,7 +29,6 @@ component App
   state street = "" persist
   state city = "" persist
   state zip = "" persist
-  state account = "" persist
   mutation looked as shape Company then afterLookup
   derive ares = reply(looked)
   derive canFinish = name.trim() != ""
@@ -61,10 +63,15 @@ component App
   state cCity = ""
   state cZip = ""
   state cEmail = ""
+  state cCurrency = "CZK"
   state cRefusal = ""
   derive cSaveHint = pending(clientSaved) ? "Saving…" : cName.trim() == "" ? "Enter a name to save." : cIco != "" and not icoValid(cIco) ? "Fix the IČO or leave it empty to save." : ""
 
-  mutation erased as shape Reply refreshes clients, invoices
+  resource bankAccounts = loadBankAccounts() as shape BankAccount[] else empty()
+  mutation bankAccountSaved as shape Reply refreshes bankAccounts then afterBankAccountSave
+  mutation bankAccountRemoved as shape Reply refreshes bankAccounts
+
+  mutation erased as shape Reply refreshes clients, invoices, bankAccounts
 
   action step
     now = performanceNow()
@@ -105,8 +112,18 @@ component App
     city = value
   action editZip(value: string)
     zip = value
-  action editAccount(value: string)
-    account = value.replaceAll(" ", "")
+  action openAddBankAccount
+    nav = push(nav, "/new-bank-account")
+  action saveBankAccount(id: string, number: string, currency: string)
+    if not pending(bankAccountSaved)
+      send bankAccountSaved = saveBankAccount(id, number, currency)
+  action afterBankAccountSave
+    if top(nav).name == "newBankAccount" or top(nav).name == "editBankAccount"
+      nav = back(nav)
+  action removeBankAccount(id: string)
+    send bankAccountRemoved = removeBankAccount(id)
+    if top(nav).name == "editBankAccount" and top(nav).params.id == id
+      nav = back(nav)
 
   action reloadInvoices
     refresh invoices
@@ -114,9 +131,9 @@ component App
     nav = push(nav, "/new-invoice")
   action openEditInvoice(id: string)
     nav = push(nav, path("editInvoice", id))
-  action saveInvoice(id: string, clientId: string, issued: string, dueDays: number, items: Item[])
+  action saveInvoice(id: string, clientId: string, issued: string, dueDays: number, items: Item[], currency: string)
     if not pending(invoiceSaved)
-      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email=""), issued, dueDays, items, account)
+      send invoiceSaved = saveInvoice(id, clientOf(clients, clientId), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email="", currency=currency), issued, dueDays, items, accountFor(bankAccounts, currency), currency)
   action afterInvoiceSave
     if match invoiceSaved { case some(answer) => answer.ok, case none => false }
       if top(nav).name == "newInvoice" or top(nav).name == "editInvoice"
@@ -156,6 +173,7 @@ component App
     cCity = ""
     cZip = ""
     cEmail = ""
+    cCurrency = "CZK"
     cRefusal = ""
   action openEditClient(id: string)
     let client = clientOf(clients, id)
@@ -167,6 +185,7 @@ component App
     cCity = client.city
     cZip = client.zip
     cEmail = client.email
+    cCurrency = client.currency
     cRefusal = ""
     nav = push(nav, path("editClient", id))
   action editCIco(value: string)
@@ -195,9 +214,11 @@ component App
     cZip = value
   action editCEmail(value: string)
     cEmail = value.trim()
+  action pickCCurrency(value: string)
+    cCurrency = value
   action saveClient
     if cSaveHint == ""
-      send clientSaved = saveClient(cId, cName.trim(), cIco, cDic, cStreet.trim(), cCity.trim(), cZip.trim(), cEmail)
+      send clientSaved = saveClient(cId, cName.trim(), cIco, cDic, cStreet.trim(), cCity.trim(), cZip.trim(), cEmail, cCurrency)
   action afterClientSave
     let refusal = match clientSaved { case some(answer) => answer.error, case none => "" }
     cRefusal = refusal
@@ -222,7 +243,6 @@ component App
     street = ""
     city = ""
     zip = ""
-    account = ""
     query = ""
     nav = back(nav)
 
@@ -242,21 +262,29 @@ component App
                   Welcome(route=entry.id, start=start)
               if entry.name == "details"
                 Details(route=entry.id, onboarded=onboarded, canFinish=canFinish,
-                  ico=ico, name=name, dic=dic, street=street, city=city, zip=zip, account=account,
+                  ico=ico, name=name, dic=dic, street=street, city=city, zip=zip, bankAccounts=bankAccounts,
                   ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
                   finish=finish, logout=askLogout, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
-                  editStreet=editStreet, editCity=editCity, editZip=editZip, editAccount=editAccount)
+                  editStreet=editStreet, editCity=editCity, editZip=editZip,
+                  addBankAccount=openAddBankAccount, removeBankAccount=removeBankAccount)
+              if entry.name == "newBankAccount"
+                BankAccountForm(route=entry.id, isNew=true, entry=BankAccount(id="", account="", currency="CZK"),
+                  saving=pending(bankAccountSaved), cancel=back, save=saveBankAccount(""), remove=back)
+              if entry.name == "editBankAccount"
+                for account in bankAccounts.filter(candidate => candidate.id == entry.params.id) key=account.id
+                  BankAccountForm(route=entry.id, isNew=false, entry=account, saving=pending(bankAccountSaved),
+                    cancel=back, save=saveBankAccount(account.id), remove=removeBankAccount(account.id))
               if entry.name == "invoice"
                 InvoiceDetail(route=entry.id, id=entry.params.id, invoices=invoices, today=today, loading=pending(invoices),
                   edit=openEditInvoice(entry.params.id), setPaid=setInvoicePaid(entry.params.id),
                   share=sharePdf(entry.params.id), sharing=pending(pdfMade),
                   askRemove=askRemoveInvoice(entry.params.id), back=back)
               if entry.name == "newInvoice"
-                InvoiceForm(route=entry.id, isNew=true, clients=clients, invoice=noInvoice(), today=today,
+                InvoiceForm(route=entry.id, isNew=true, clients=clients, invoice=noInvoice(), bankAccounts=bankAccounts, today=today,
                   saving=pending(invoiceSaved), cancel=back, save=saveInvoice(""))
               if entry.name == "editInvoice"
                 for inv in invoices.filter(candidate => candidate.id == entry.params.id) key=inv.id
-                  InvoiceForm(route=entry.id, isNew=false, clients=clients, invoice=inv, today=today,
+                  InvoiceForm(route=entry.id, isNew=false, clients=clients, invoice=inv, bankAccounts=bankAccounts, today=today,
                     saving=pending(invoiceSaved), cancel=back, save=saveInvoice(entry.params.id))
               if entry.name == "clients"
                 ClientList(route=entry.id, clients=clients, shown=shown, query=query,
@@ -267,11 +295,11 @@ component App
                   edit=openEditClient(entry.params.id), askRemove=askRemoveClient(entry.params.id), back=back)
               if entry.name == "newClient" or entry.name == "editClient"
                 ClientForm(route=entry.id, isNew=(entry.name == "newClient"),
-                  ico=cIco, name=cName, dic=cDic, street=cStreet, city=cCity, zip=cZip, email=cEmail,
+                  ico=cIco, name=cName, dic=cDic, street=cStreet, city=cCity, zip=cZip, email=cEmail, currency=cCurrency,
                   refusal=cRefusal, ares=cAres, lookingUp=pending(clientLooked), lookupFailed=failed(clientLooked),
                   saveHint=cSaveHint, canSave=(cSaveHint == ""),
                   cancel=back, save=saveClient, editIco=editCIco, lookup=lookupClient, editName=editCName,
-                  editDic=editCDic, editStreet=editCStreet, editCity=editCCity, editZip=editCZip, editEmail=editCEmail)
+                  editDic=editCDic, editStreet=editCStreet, editCity=editCCity, editZip=editCZip, editEmail=editCEmail, pickCurrency=pickCCurrency)
 
       TabBar(tab=nav.tab, shown=onboarded, pick=pick)
 

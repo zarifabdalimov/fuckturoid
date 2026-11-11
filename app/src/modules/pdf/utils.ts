@@ -31,8 +31,8 @@ export function literal(text: string): string {
     const extra = EXTRA.indexOf(char);
     const code = extra >= 0 ? extra + 1 : (WINANSI[char] ?? char.charCodeAt(0));
     if (char === '(' || char === ')' || char === '\\') out += `\\${char}`;
-    else if (code < 32 || code > 126) out += `\\${code.toString(8).padStart(3, '0')}`;
     else if (code > 255) out += '?';
+    else if (code < 32 || code > 126) out += `\\${code.toString(8).padStart(3, '0')}`;
     else out += String.fromCharCode(code);
   }
   return `${out})`;

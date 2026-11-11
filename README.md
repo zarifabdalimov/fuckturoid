@@ -77,8 +77,11 @@ reads them without running any code. Contract can't import TypeScript, so `kc` a
 - **Invoices:** numbered per year (2026-0001), a client and your details copied in when
   saved, lines with quantity × price in Kč, due in 7/14/30 days; Paid and Overdue badges,
   a Paid switch, edit, and delete (which asks).
-- **Bank account** (in Your details): Czech format, checked by its check digits; copied into
-  each invoice when saved; the PDF shows it and its IBAN.
+- **Bank accounts** (in Your details): any number, each in the Czech format (checked by its
+  check digits) with a currency; add, edit, swipe to delete.
+- **Currencies:** CZK, EUR, USD, GBP. A client has a default currency; an invoice starts in
+  it and can change it, is shown and printed in it, and is paid into your account in that
+  currency (copied into the invoice when saved, with its IBAN on the PDF).
 - **PDF export:** the Share button on an invoice makes a Czech A4 PDF (Faktura) and opens
   the share sheet: Save to Files, Mail, AirDrop, Print.
 - **Log Out** (in Your details): asks, then erases your details, clients and invoices and

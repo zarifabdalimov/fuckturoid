@@ -6,6 +6,10 @@ import { icoHolder } from './utils.ts';
 
 export type { Change, Client, ClientFields } from './types.ts';
 
+export function withDefaults(all: Client[]): Client[] {
+  return R.map(all, (client) => ({ ...client, currency: client.currency ?? 'CZK' }));
+}
+
 export function sortClients(all: Client[]): Client[] {
   return R.sort(all, (first, second) => first.name.localeCompare(second.name, SORT_LOCALE));
 }

@@ -17,6 +17,7 @@ shape Client
   city: string
   zip: string
   email: string
+  currency: string
 
 shape Reply
   ok: bool
@@ -42,7 +43,7 @@ fn icoMessage(ico: string, answer: Company, busy: bool, broke: bool): string = i
 
 fn icoProblem(ico: string, answer: Company, broke: bool): bool = icoBad(ico) or broke or answer.ico == ico and answer.error != ""
 
-fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="")
+fn noClient(): Client = Client(id="", name="", ico="", dic="", street="", city="", zip="", email="", currency="CZK")
 
 fn clientOf(clients: Client[], id: string): Client = match first(clients.filter(client => client.id == id)) { case some(client) => client, case none => noClient() }
 
@@ -70,6 +71,7 @@ shape Invoice
   paid: bool
   paidOn: string
   account: string
+  currency: string
 
 shape DraftItem
   key: number
@@ -92,7 +94,9 @@ fn amount(text: string): number = match parseNumber(text.trim().replaceAll(" ", 
 
 fn twoDigits(value: number): string = value < 10 ? `0${value}` : `${value}`
 
-fn kc(hellers: number): string = `${formatNumber(floor(round(hellers) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(hellers) % 100)} Kč`
+fn currencySymbol(currency: string): string = currency == "EUR" ? "€" : currency == "USD" ? "$" : currency == "GBP" ? "£" : "Kč"
+
+fn money(cents: number, currency: string): string = `${formatNumber(floor(round(cents) / 100), "decimal").replaceAll(",", " ")},${twoDigits(round(cents) % 100)} ${currencySymbol(currency)}`
 
 fn priceText(hellers: number): string = hellers % 100 == 0 ? `${hellers / 100}` : formatDecimal(hellers, 2).replaceAll(".", ",")
 
@@ -112,7 +116,7 @@ fn czDate(iso: string): string = iso == "" ? "" : `${amount(iso.slice(8, 10))}. 
 
 fn overdue(inv: Invoice, today: string): bool = not inv.paid and inv.due < today
 
-fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="", account="")
+fn noInvoice(): Invoice = Invoice(id="", number="", issued="", due="", dueDays=14, client=noClient(), supplier=noClient(), items=[], total=0, paid=false, paidOn="", account="", currency="CZK")
 
 fn invoiceOf(invoices: Invoice[], id: string): Invoice = match first(invoices.filter(invoice => invoice.id == id)) { case some(invoice) => invoice, case none => noInvoice() }
 
@@ -139,3 +143,14 @@ fn accountNumber(account: string): string = accountMain(account).includes("-") ?
 fn accountShapeOk(account: string): bool = accountBank(account).length == 4 and digitsOnly(accountBank(account)) and accountNumber(account).length >= 2 and accountNumber(account).length <= 10 and digitsOnly(accountNumber(account)) and (not accountMain(account).includes("-") or accountPrefix(account).length <= 6 and digitsOnly(accountPrefix(account)))
 
 fn accountProblem(account: string): string = account == "" ? "" : not accountShapeOk(account) ? "Write it as 123456789/0800, or 19-123456789/0800 with a prefix." : accountNumberSum(accountNumber(account)) % 11 != 0 or accountPrefixSum(accountPrefix(account)) % 11 != 0 ? "Its check digits don't match. Look for a typo." : ""
+
+shape BankAccount
+  id: string
+  account: string
+  currency: string
+
+fn accountFor(accounts: BankAccount[], currency: string): string = match first(accounts.filter(entry => entry.currency == currency)) { case some(entry) => entry.account, case none => "" }
+
+fn noBankAccount(): BankAccount = BankAccount(id="", account="", currency="CZK")
+
+fn bankAccountOf(accounts: BankAccount[], id: string): BankAccount = match first(accounts.filter(entry => entry.id == id)) { case some(entry) => entry, case none => noBankAccount() }

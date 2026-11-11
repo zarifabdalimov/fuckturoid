@@ -1,0 +1,52 @@
+use BankAccount, accountProblem from "../model/model.contract"
+use CurrencyChoice from "./currency-choice.contract"
+
+component BankAccountForm
+  props
+    route: number
+    isNew: bool
+    entry: BankAccount
+    saving: bool
+    cancel: action
+    save: action
+    remove: action
+  state account = entry.account
+  state currency = entry.currency
+  derive problem = accountProblem(account)
+  derive canSave = account != "" and problem == "" and not saving
+
+  action editAccount(value: string)
+    account = value.replaceAll(" ", "")
+  action pickCurrency(value: string)
+    currency = value
+  action submit
+    if canSave
+      save(account, currency)
+
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`bank-form-${route}` position="absolute" inset=0
+      header display="flex" align-items="center" justify-content="space-between"
+        button id="back" press=cancel aria-label="Cancel" testId="bank-cancel"
+          image "symbol:close"
+        text (isNew ? "New Bank Account" : "Bank Account") role="heading"
+        button press=submit buttonStyle="bordered-prominent" aria-label="Save" disabled=(not canSave) testId="bank-save"
+          image "symbol:checkmark"
+      list id=`bank-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        section
+          row
+            input value=account input=editAccount submit=submit placeholder="123456789/0800" aria-label="Account number"
+              autocapitalize="none" autofocus=isNew testId="bank-account" flex=1 min-width=0
+          footer
+            text (problem != "" ? problem : "The Czech format: number/bank code, with a prefix if it has one.")
+              color=(problem != "" ? "-exact-system-red" : "-exact-secondary-label") testId="bank-hint"
+        section
+          header
+            text "Currency"
+          row
+            CurrencyChoice(value=currency, pick=pickCurrency, testPrefix="bank-currency")
+          footer
+            text `Invoices in ${currency} are paid into this account.`
+        if not isNew
+          section
+            button press=remove destructive=true testId="bank-delete"
+              text "Delete Bank Account"

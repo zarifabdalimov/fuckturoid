@@ -12,6 +12,7 @@ export type InvoiceInput = {
   dueDays: number;
   items: Item[];
   account: string;
+  currency: string;
 };
 
 export type Found = { ok: true; invoice: Invoice } | { ok: false; error: string };
