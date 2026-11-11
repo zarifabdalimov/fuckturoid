@@ -21,7 +21,13 @@ bun exact.mjs ios --run      # build and launch on the booted iOS Simulator
 bun exact.mjs test ios       # run app.test.contract
 bun exact.mjs web            # the web dev loop at http://127.0.0.1:8765/
 bun run check                # oxfmt --check + oxlint (also: lint, lint:fix, format)
+bun run seed                 # fill the booted iOS Simulator with sample data (replaces what is there)
 ```
+
+`bun run seed` (`tools/seed.ts`, `--device <udid>` for another simulator) stops the app,
+writes a made-up supplier (onboarding done), two bank accounts (CZK, EUR), four clients
+and eight invoices dated relative to today (paid, unpaid, overdue, one older than a year,
+CZK and EUR), and relaunches it. It replaces the app's data on that simulator.
 
 ## Layout
 
@@ -34,6 +40,7 @@ app/
   app.tamber          brand colours (the landing screen's gradient and ink)
   assets/             icon-1024.png (the app icon), icons/ (symbols the platform lacks)
   tools/draw-icon.py  draws the app icon: `python3 tools/draw-icon.py assets/icon-1024.png`
+  tools/seed.ts       sample data for the simulator: `bun run seed`
   src/
     screens/          one .contract per screen (and parts: Confirm, TabBar, IcoSection)
     model/            business logic
