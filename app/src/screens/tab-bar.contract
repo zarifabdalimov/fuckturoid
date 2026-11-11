@@ -1,0 +1,17 @@
+// The tab bar. Always drawn (without it the root has no tabs), hidden until
+// onboarding is done.
+component TabBar
+  props
+    tab: string
+    shown: bool
+    pick: action
+  view
+    row role="tablist" display=(shown ? "flex" : "none") testId="tabs"
+      button role="tab" aria-controls="panel-invoices" aria-selected=(tab == "invoices") press=pick("invoices")
+        testId="tab-invoices" flex=1
+        image "symbol:document"
+        text "Invoices"
+      button role="tab" aria-controls="panel-clients" aria-selected=(tab == "clients") press=pick("clients")
+        testId="tab-clients" flex=1
+        image "symbol:people"
+        text "Clients"

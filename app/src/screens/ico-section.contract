@@ -1,18 +1,22 @@
 // The IČO field with its ARES lookup, a section of a grouped form.
 // Your details and the client sheet both use it; `prefix` keeps their test ids apart.
-use icoValid from "../model.contract"
+// It works out what to say from the last ARES reply the root received.
+use Company, icoValid, icoMessage, icoProblem from "../model.contract"
 
 component IcoSection
   props
     prefix: string
     label: string
+    // Said while the field is empty.
+    emptyHint: string
     ico: string
-    hint: string
-    red: bool
+    reply: Company
     busy: bool
+    broke: bool
     autofocus: bool
     edit: action
     lookup: action
+  derive hint = ico == "" ? emptyHint : icoMessage(ico, reply, busy, broke)
   view
     section
       row
@@ -23,4 +27,4 @@ component IcoSection
         button press=lookup disabled=(not icoValid(ico) or busy) testId=`${prefix}lookup`
           text (busy ? "Looking up…" : "Fill in from ARES")
       footer
-        text hint color=(red ? "-exact-system-red" : "-exact-secondary-label") testId=`${prefix}ico-hint`
+        text hint color=(icoProblem(ico, reply, broke) ? "-exact-system-red" : "-exact-secondary-label") testId=`${prefix}ico-hint`

@@ -1,6 +1,7 @@
 // The Invoices tab: the list, an invoice's detail, and the new/edit sheet.
 use Badge, EmptyState from "exact:content"
 use Client, Invoice, DraftItem, kc, czDate, overdue, invoiceOf, invoiceFound, idLine, itemHellers, itemValid, itemFilled from "../model.contract"
+use blankItem, draftTotal, toItem, toDraft from "../model.contract"
 
 component InvoiceList
   props
@@ -136,36 +137,59 @@ component InvoiceDetail
           button press=back buttonStyle="filled" testId="missing-invoice-back"
             text "Back to Invoices"
 
-// The new/edit sheet. Its drafts live in the root, which fills them before opening it.
+// The new/edit sheet. It keeps its own drafts, starting from `invoice` (an empty
+// one for New), and hands the root the finished invoice on Save: save(clientId,
+// issued, dueDays, items). A new sheet is a new component, so its drafts start fresh.
 component InvoiceForm
   props
     route: number
     isNew: bool
     clients: Client[]
-    clientId: string
-    issued: string
-    dueDays: number
-    items: DraftItem[]
-    total: number
-    saveHint: string
-    canSave: bool
+    invoice: Invoice
+    today: string
+    saving: bool
     cancel: action
     save: action
-    pickClient: action
-    setIssued: action
-    setDueDays: action
-    editDesc: action
-    editQty: action
-    editPrice: action
-    addItem: action
-    removeItem: action
+  state clientId = isNew ? (clients.length == 1 ? match clients.at(0) { case some(c) => c.id, case none => "" } : "") : invoice.client.id
+  state issued = isNew ? today : invoice.issued
+  state dueDays = isNew ? 14 : invoice.dueDays
+  state items = invoice.items.length == 0 ? [blankItem(0)] : invoice.items.map((it, j) => toDraft(it, j))
+  // The next line's key: a line keeps its key while others are added and removed.
+  state nextKey = invoice.items.length + 1
+  derive lines = items.filter(d => itemFilled(d))
+  derive total = draftTotal(items)
+  // Why Save is disabled (not red: nothing is wrong yet).
+  derive saveHint = saving ? "Saving…" : clientId == "" ? "Choose a client to save." : lines.length == 0 ? "Add an item to save." : lines.filter(d => not itemValid(d)).length > 0 ? "Fix the items marked in red to save." : issued == "" ? "Choose the issue date to save." : ""
+
+  action pickClient(v: string)
+    clientId = v
+  action setIssued(v: string)
+    issued = v
+  action setDueDays(d: number)
+    dueDays = d
+  action editDesc(i: number, v: string)
+    items = items.map((d, j) => j == i ? DraftItem(d, description=v) : d)
+  action editQty(i: number, v: string)
+    items = items.map((d, j) => j == i ? DraftItem(d, quantity=v) : d)
+  action editPrice(i: number, v: string)
+    items = items.map((d, j) => j == i ? DraftItem(d, price=v) : d)
+  action addItem
+    items = items.concat([blankItem(nextKey)])
+    nextKey = nextKey + 1
+  action removeItem(i: number)
+    if items.length > 1
+      items = items.filter((d, j) => j != i)
+  action submit
+    if saveHint == ""
+      save(clientId, issued, dueDays, lines.map(d => toItem(d)))
+
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationScroll=`invoice-form-${route}` position="absolute" inset=0
       header display="flex" align-items="center" justify-content="space-between"
         button id="back" press=cancel aria-label="Cancel" testId="invoice-cancel"
           image "symbol:close"
         text (isNew ? "New Invoice" : "Edit Invoice") role="heading"
-        button press=save buttonStyle="bordered-prominent" aria-label="Save" disabled=(not canSave) testId="invoice-save"
+        button press=submit buttonStyle="bordered-prominent" aria-label="Save" disabled=(saveHint != "") testId="invoice-save"
           image "symbol:checkmark"
       list id=`invoice-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
         section

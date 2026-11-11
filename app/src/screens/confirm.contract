@@ -1,0 +1,18 @@
+// An alert that asks before something can't be undone: Cancel, or the
+// destructive action. The root opens it with showModal(id).
+component Confirm
+  props
+    id: string
+    title: string
+    message: string
+    confirmLabel: string
+    confirm: action
+    // Test ids: `${testPrefix}-confirm`, `${testPrefix}-cancel`.
+    testPrefix: string
+  view
+    dialog id=id role="alertdialog" aria-label=title
+      text message
+      button press=confirm destructive=true commandfor=id command="close" testId=`${testPrefix}-confirm`
+        text confirmLabel
+      button commandfor=id command="close" testId=`${testPrefix}-cancel`
+        text "Cancel"

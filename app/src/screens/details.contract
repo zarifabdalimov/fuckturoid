@@ -1,5 +1,6 @@
 // Your details: the supplier block of every invoice. During onboarding it has
 // a Done that waits for a name; later it is opened from Invoices to edit.
+use Company from "../model.contract"
 use IcoSection from "./ico-section.contract"
 
 component Details
@@ -13,9 +14,9 @@ component Details
     street: string
     city: string
     zip: string
-    icoHint: string
-    icoRed: bool
+    ares: Company
     lookingUp: bool
+    lookupFailed: bool
     finish: action
     logout: action
     editIco: action
@@ -34,7 +35,8 @@ component Details
           button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="finish"
             text "Done"
       list id="form" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        IcoSection(prefix="", label="IČO", ico=ico, hint=icoHint, red=icoRed, busy=lookingUp, autofocus=false, edit=editIco, lookup=lookup)
+        IcoSection(prefix="", label="IČO", emptyHint="Enter your IČO and the rest fills in from ARES.", ico=ico,
+          reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=false, edit=editIco, lookup=lookup)
         section
           row
             input value=name input=editName placeholder="Name or company" aria-label="Name"

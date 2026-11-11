@@ -1,6 +1,6 @@
 // The Clients tab: the list, a client's detail, and the add/edit sheet.
 use EmptyState from "exact:content"
-use Client, clientOf, clientLine, found from "../model.contract"
+use Client, Company, clientOf, clientLine, found from "../model.contract"
 use IcoSection from "./ico-section.contract"
 
 component ClientList
@@ -113,9 +113,9 @@ component ClientForm
     zip: string
     email: string
     refusal: string
-    icoHint: string
-    icoRed: bool
+    ares: Company
     lookingUp: bool
+    lookupFailed: bool
     saveHint: string
     canSave: bool
     cancel: action
@@ -138,7 +138,8 @@ component ClientForm
           disabled=(not canSave)
           image "symbol:checkmark"
       list id=`client-form-${route}` appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        IcoSection(prefix="c-", label="Client IČO", ico=ico, hint=icoHint, red=icoRed, busy=lookingUp, autofocus=isNew, edit=editIco, lookup=lookup)
+        IcoSection(prefix="c-", label="Client IČO", emptyHint="Enter the client's IČO and the rest fills in from ARES.", ico=ico,
+          reply=ares, busy=lookingUp, broke=lookupFailed, autofocus=isNew, edit=editIco, lookup=lookup)
         section
           row
             column flex=1 min-width=0 gap=4
