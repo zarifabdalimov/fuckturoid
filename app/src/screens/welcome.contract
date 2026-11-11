@@ -17,10 +17,10 @@ component Welcome
           text "Invoicing without the f*ckery." font-size=26 font-weight=700 color="hero.ink" margin-top=8
           text "Bill clients from your phone, get paid, and give zero f*cks about paperwork."
             font-size=17 color="hero.ink-soft" margin-top=12 max-width="22rem"
-          row flex-wrap="wrap" justify-content="center" gap=8 margin-top=24
-            for feature in ["IČO autofill from ARES", "PDF invoices", "Bank details & IBAN"] key=feature
-              text feature font-size=13 font-weight=600 color="hero.ink" padding="6px 12px" border-radius=999
-                background-color="hero.glass"
+          column gap=14 margin-top=32 align-items="flex-start" text-align="start"
+            Feature(symbol="symbol:sparkles", label="Fill in companies from ARES by IČO")
+            Feature(symbol="symbol:document", label="Send PDF invoices in seconds")
+            Feature(symbol="symbol:icon.bank", label="Bank details and IBAN on every invoice")
       column padding="12px 24px 20px" gap=12
         button press=start testId="get-started" height=58 border-radius=18 background-color="hero.cta"
           row gap=8 align-items="center" justify-content="center" width="100%"
@@ -28,3 +28,14 @@ component Welcome
             image "symbol:forward-chevron" color="hero.cta-ink" aria-hidden=true
         text "Free, no account. Your data stays on this phone." font-size=13 color="hero.ink-faint"
           text-align="center"
+
+component Feature
+  props
+    symbol: string
+    label: string
+  view
+    row gap=12 align-items="center"
+      column width=32 height=32 border-radius=10 background-color="hero.glass" align-items="center"
+        justify-content="center"
+        image symbol color="hero.ink" aria-hidden=true
+      text label font-size=16 font-weight=500 color="hero.ink"

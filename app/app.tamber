@@ -11,3 +11,6 @@ theme
   hero.glass = rgba(255, 255, 255, 0.15)  scheme=fixed
   hero.cta = #ffffff  scheme=fixed
   hero.cta-ink = #0f1012  scheme=fixed
+
+icons
+  icon.bank = icon(sf "building.columns", svg "icons/bank.svg")
