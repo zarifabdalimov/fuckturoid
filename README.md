@@ -84,6 +84,9 @@ reads them without running any code. Contract can't import TypeScript, so `kc` a
 - **Currencies:** CZK, EUR, USD, GBP. A client has a default currency; an invoice starts in
   it and can change it, is shown and printed in it, and is paid into your account in that
   currency (copied into the invoice when saved, with its IBAN on the PDF).
+- **Duplicate invoice:** a copy issued today with the next number, a due date on the same
+  terms, unpaid, with your current details and bank account; month names in its items
+  (Czech nominative and genitive, English) move to the current month.
 - **PDF export:** the Share button on an invoice makes a Czech A4 PDF (Faktura) and opens
   the share sheet: Save to Files, Mail, AirDrop, Print.
 - **Log Out** (in Your details): asks, then erases your details, clients and invoices and

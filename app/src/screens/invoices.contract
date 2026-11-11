@@ -84,6 +84,8 @@ component InvoiceDetail
     setPaid: action
     share: action
     sharing: bool
+    duplicate: action
+    duplicating: bool
     askRemove: action
     back: action
   view
@@ -133,6 +135,8 @@ component InvoiceDetail
                   text inv.account testId="invoice-account"
             PartySection(title="From", party=inv.supplier, prefix="from")
             section
+              button press=duplicate disabled=duplicating testId="duplicate-invoice"
+                text "Duplicate Invoice"
               button press=askRemove destructive=true testId="delete-invoice"
                 text "Delete Invoice"
       else

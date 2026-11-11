@@ -14,6 +14,7 @@ import {
   sortBankAccounts,
 } from './src/model/bank/index.ts';
 import {
+  duplicateInvoice,
   findInvoice,
   type Invoice,
   pdfFileName,
@@ -64,6 +65,12 @@ const sources: Sources = {
       storage,
       putInvoice(await invoices.load(storage), id, { client, supplier, issued, dueDays, items, account, currency }),
     ),
+  duplicateInvoice: async ([id, today, supplier, account], _store, storage) => {
+    const duplicated = duplicateInvoice(await invoices.load(storage), id, today, supplier, account);
+    if (!duplicated) return { ok: false, error: 'This invoice no longer exists.', id: '' };
+    await invoices.save(storage, duplicated.next);
+    return { ok: true, error: '', id: duplicated.id };
+  },
   setInvoicePaid: async ([id, paid, day], _store, storage) =>
     invoices.save(storage, setPaid(await invoices.load(storage), id, paid, day)),
   removeInvoice: async ([id], _store, storage) =>

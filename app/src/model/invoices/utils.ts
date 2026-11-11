@@ -1,5 +1,5 @@
 import * as R from 'remeda';
-import { NUMBER_DIGITS } from './preset.ts';
+import { MONTH_NAMES, NUMBER_DIGITS } from './preset.ts';
 import type { Invoice, Item } from './types.ts';
 
 export function addDays(iso: string, days: number): string {
@@ -19,4 +19,26 @@ export function nextNumber(all: Invoice[], issued: string): string {
 
 export function invoiceTotal(items: Item[]): number {
   return R.sumBy(items, (item) => Math.round(item.quantity * item.unitPrice));
+}
+
+export function monthOf(iso: string): number {
+  return Number(iso.slice(5, 7)) - 1;
+}
+
+function matchCase(original: string, replacement: string): string {
+  if (original === original.toUpperCase() && original !== original.toLowerCase()) return replacement.toUpperCase();
+  if (original[0] === original[0].toUpperCase()) return replacement[0].toUpperCase() + replacement.slice(1);
+  return replacement;
+}
+
+export function shiftMonthNames(text: string, fromMonth: number, toMonth: number): string {
+  if (fromMonth === toMonth) return text;
+  const tokens = text.split(/([^A-Za-zÀ-ž]+)/);
+  return R.join(
+    R.map(tokens, (token) => {
+      const names = R.find(MONTH_NAMES, (forms) => forms[fromMonth] === token.toLowerCase());
+      return names ? matchCase(token, names[toMonth]) : token;
+    }),
+    '',
+  );
 }

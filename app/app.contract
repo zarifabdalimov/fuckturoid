@@ -1,4 +1,4 @@
-use Company, Client, Item, Reply, FileReply, Invoice, Time, icoValid, reply, aresFound, clientOf, matches from "./src/model/model.contract"
+use Company, Client, Created, Item, Reply, FileReply, Invoice, Time, icoValid, reply, aresFound, clientOf, matches from "./src/model/model.contract"
 use invoiceOf, noInvoice, BankAccount, accountFor, bankAccountOf from "./src/model/model.contract"
 use Welcome from "./src/screens/welcome.contract"
 use InvoiceList, InvoiceDetail, InvoiceForm from "./src/screens/invoices.contract"
@@ -45,6 +45,7 @@ component App
   mutation invoicePaidSaved as shape Reply refreshes invoices
   mutation invoiceRemoved as shape Reply refreshes invoices
   mutation pdfMade as shape FileReply then afterPdf
+  mutation invoiceDuplicated as shape Created refreshes invoices then afterDuplicate
   derive pdfPath = match pdfMade { case some(answer) => answer.ok ? answer.path : "", case none => "" }
   state aimedInvoice = ""
 
@@ -145,6 +146,13 @@ component App
   action afterPdf
     if pdfPath != ""
       share(title=`Faktura ${invoiceOf(invoices, top(nav).params.id).number}`, files=[pdfPath])
+  action duplicate(id: string)
+    if not pending(invoiceDuplicated)
+      send invoiceDuplicated = duplicateInvoice(id, formatDate(time.epochAtZero + performanceNow(), time.utcOffset, "iso"), Client(id="me", name=name.trim(), ico=ico, dic=dic, street=street.trim(), city=city.trim(), zip=zip.trim(), email="", currency=invoiceOf(invoices, id).currency), accountFor(bankAccounts, invoiceOf(invoices, id).currency))
+  action afterDuplicate
+    let created = match invoiceDuplicated { case some(answer) => answer.ok ? answer.id : "", case none => "" }
+    if created != ""
+      nav = push(nav, path("invoice", created))
   action setInvoicePaid(id: string, on: bool)
     send invoicePaidSaved = setInvoicePaid(id, on, formatDate(time.epochAtZero + performanceNow(), time.utcOffset, "iso"))
   action askRemoveInvoice(id: string)
@@ -281,6 +289,7 @@ component App
                 InvoiceDetail(route=entry.id, id=entry.params.id, invoices=invoices, today=today, loading=pending(invoices),
                   edit=openEditInvoice(entry.params.id), setPaid=setInvoicePaid(entry.params.id),
                   share=sharePdf(entry.params.id), sharing=pending(pdfMade),
+                  duplicate=duplicate(entry.params.id), duplicating=pending(invoiceDuplicated),
                   askRemove=askRemoveInvoice(entry.params.id), back=back)
               if entry.name == "newInvoice"
                 InvoiceForm(route=entry.id, isNew=true, clients=clients, invoice=noInvoice(), bankAccounts=bankAccounts, today=today,

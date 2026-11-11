@@ -154,3 +154,8 @@ fn accountFor(accounts: BankAccount[], currency: string): string = match first(a
 fn noBankAccount(): BankAccount = BankAccount(id="", account="", currency="CZK")
 
 fn bankAccountOf(accounts: BankAccount[], id: string): BankAccount = match first(accounts.filter(entry => entry.id == id)) { case some(entry) => entry, case none => noBankAccount() }
+
+shape Created
+  ok: bool
+  error: string
+  id: string

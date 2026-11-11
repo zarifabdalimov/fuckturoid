@@ -1,11 +1,11 @@
 import * as R from 'remeda';
 import { nextId } from '../../utils/ids.ts';
 import { MISSING, PDF_PREFIX } from './preset.ts';
-import type { Found, Invoice, InvoiceInput } from './types.ts';
-import { addDays, invoiceTotal, nextNumber } from './utils.ts';
+import type { Duplicated, Found, Invoice, InvoiceInput, Party } from './types.ts';
+import { addDays, invoiceTotal, monthOf, nextNumber, shiftMonthNames } from './utils.ts';
 
-export type { Found, Invoice, InvoiceInput, Item, Party } from './types.ts';
-export { addDays, invoiceTotal, nextNumber } from './utils.ts';
+export type { Duplicated, Found, Invoice, InvoiceInput, Item, Party } from './types.ts';
+export { addDays, invoiceTotal, nextNumber, shiftMonthNames } from './utils.ts';
 
 export function withDefaults(all: Invoice[]): Invoice[] {
   return R.map(all, (invoice) => {
@@ -49,4 +49,32 @@ export function findInvoice(all: Invoice[], id: string): Found {
 
 export function pdfFileName(inv: Invoice): string {
   return `${PDF_PREFIX}-${inv.number}.pdf`;
+}
+
+export function duplicateInvoice(
+  all: Invoice[],
+  id: string,
+  today: string,
+  supplier: Party,
+  account: string,
+): Duplicated | undefined {
+  const original = R.find(all, (invoice) => invoice.id === id);
+  if (!original) return undefined;
+  const items = R.map(original.items, (item) => ({
+    ...item,
+    description: shiftMonthNames(item.description, monthOf(original.issued), monthOf(today)),
+  }));
+  const copy: Invoice = {
+    ...original,
+    id: nextId(all),
+    number: nextNumber(all, today),
+    issued: today,
+    due: addDays(today, original.dueDays),
+    supplier,
+    account,
+    items,
+    paid: false,
+    paidOn: '',
+  };
+  return { next: R.concat(all, [copy]), id: copy.id };
 }

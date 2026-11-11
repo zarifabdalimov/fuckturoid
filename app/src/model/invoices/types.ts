@@ -16,3 +16,5 @@ export type InvoiceInput = {
 };
 
 export type Found = { ok: true; invoice: Invoice } | { ok: false; error: string };
+
+export type Duplicated = { next: Invoice[]; id: string };
