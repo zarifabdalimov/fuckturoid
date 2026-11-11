@@ -1,3 +1,5 @@
+use Button from "../components/button.contract"
+
 component Welcome
   props
     route: number
@@ -20,10 +22,8 @@ component Welcome
             Feature(symbol="symbol:document", label="Send PDF invoices in seconds")
             Feature(symbol="symbol:icon.bank", label="Bank details and IBAN on every invoice")
       column padding="12px 24px 20px" gap=12
-        button press=start testId="get-started" height=58 border-radius=18 background-color="hero.cta"
-          row gap=8 align-items="center" justify-content="center" width="100%"
-            text "Get started" font-size=18 font-weight=700 color="hero.cta-ink"
-            image "symbol:forward-chevron" color="hero.cta-ink" aria-hidden=true
+        Button(label="Get started", variant="primary", size="large", trailingIcon="symbol:forward-chevron", disabled=false,
+          press=start, buttonId="get-started")
         text "Free, no account. Your data stays on this phone." font-size=13 color="hero.ink-faint"
           text-align="center"
 

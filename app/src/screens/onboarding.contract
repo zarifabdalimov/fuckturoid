@@ -1,0 +1,87 @@
+use BankAccount, Company, icoValid, icoMessage, icoProblem, aresFound from "../model/model.contract"
+use TextField from "../components/text-field.contract"
+use Button from "../components/button.contract"
+
+component Onboarding
+  props
+    route: number
+    canFinish: bool
+    ico: string
+    name: string
+    dic: string
+    street: string
+    city: string
+    zip: string
+    bankAccounts: BankAccount[]
+    ares: Company
+    lookingUp: bool
+    lookupFailed: bool
+    finish: action
+    editIco: action
+    lookup: action
+    editName: action
+    editDic: action
+    editStreet: action
+    editCity: action
+    editZip: action
+  derive icoHint = ico == "" ? "Type it and the rest fills in from ARES." : icoMessage(ico, ares, lookingUp, lookupFailed)
+  derive icoTone = icoProblem(ico, ares, lookupFailed) ? "error" : aresFound(ico, ares) ? "success" : "muted"
+  action next(id: string)
+    focus(id)
+  action done
+    blur()
+  view
+    column navigationKey=`${route}` position="absolute" inset=0 testId="onboarding"
+      color-scheme="dark" status-bar-style="light-content" background-color="hero.base"
+      background-image="radial-gradient(120% 50% at 50% 0%, var(--hero.glow) 0%, transparent 70%), linear-gradient(180deg, var(--hero.top) 0%, var(--hero.base) 100%)"
+      header display="flex" align-items="center"
+        text "" role="heading" aria-level=2 flex=1
+        button press=finish disabled=(not canFinish) buttonStyle="bordered-prominent" testId="done"
+          text "Done"
+      scroll flex=1 min-height=0 keyboardDismissMode="on-drag" overflow-x="hidden"
+        column padding="8px 24px 24px" gap=22 width="100%" box-sizing="border-box"
+          column gap=8
+            text "Create your account" role="heading" aria-level=1 font-size=32 font-weight=800
+              letter-spacing=-0.5 color="hero.ink"
+            text "This goes on every invoice you send. Start with your IČO and we'll fetch the rest."
+              font-size=16 color="hero.ink-soft"
+          TextField(label="IČO", value=ico, placeholder="12345678", hint=icoHint, hintTone=icoTone,
+            invalid=icoProblem(ico, ares, lookupFailed), edit=editIco, submit=lookup, fieldId="ico", keyboard="numeric",
+            autocomplete="off", autocapitalize="none", enterkeyhint="search", maxlength=8)
+            Button(label=(lookingUp ? "Looking…" : "Fill in"), variant="primary", size="small", trailingIcon="",
+              disabled=(not icoValid(ico) or lookingUp), press=lookup, buttonId="lookup")
+          TextField(label="Name or company", value=name, placeholder="Jan Novák", hint="", hintTone="muted",
+            invalid=false, edit=editName, submit=next("dic"), fieldId="name", keyboard="text",
+            autocomplete="organization", autocapitalize="words", enterkeyhint="next", maxlength=120)
+          TextField(label="DIČ", value=dic, placeholder="CZ12345678",
+            hint="Optional. Leave it empty if you aren't a VAT payer.", hintTone="muted", invalid=false, edit=editDic,
+            submit=next("street"), fieldId="dic", keyboard="text", autocomplete="off", autocapitalize="characters",
+            enterkeyhint="next", maxlength=14)
+          TextField(label="Street and number", value=street, placeholder="Vinohradská 1", hint="", hintTone="muted",
+            invalid=false, edit=editStreet, submit=next("city"), fieldId="street", keyboard="text",
+            autocomplete="street-address", autocapitalize="words", enterkeyhint="next", maxlength=120)
+          row gap=12
+            column flex=2 min-width=0
+              TextField(label="City", value=city, placeholder="Praha 2", hint="", hintTone="muted", invalid=false,
+                edit=editCity, submit=next("zip"), fieldId="city", keyboard="text", autocomplete="address-level2",
+                autocapitalize="words", enterkeyhint="next", maxlength=80)
+            column flex=1 min-width=0
+              TextField(label="ZIP", value=zip, placeholder="120 00", hint="", hintTone="muted", invalid=false,
+                edit=editZip, submit=done, fieldId="zip", keyboard="numeric", autocomplete="postal-code",
+                autocapitalize="none", enterkeyhint="done", maxlength=6)
+          link href=path("bankAccounts") testId="open-bank-accounts" display="flex" flex-direction="row"
+            align-items="center" gap=14 padding=16 border-radius=16 background-color="control.fill" box-sizing="border-box"
+            border-width=1 border-style="solid" border-color="control.line" color="hero.ink" text-decoration="none"
+            column width=40 height=40 border-radius=12 background-color="hero.glass" align-items="center"
+              justify-content="center"
+              image "symbol:icon.bank" aria-hidden=true
+            column flex=1 min-width=0 gap=2
+              text "Bank accounts" font-size=16 font-weight=600
+              text (bankAccounts.length == 0 ? "Add one so clients know where to pay" : bankAccounts.length == 1 ? "1 account" : `${bankAccounts.length} accounts`)
+                font-size=13 color="hero.ink-faint" testId="bank-accounts-count"
+            image "symbol:forward-chevron" color="control.placeholder" aria-hidden=true
+      column padding="12px 24px 20px" gap=10 box-sizing="border-box"
+        Button(label="Create account", variant="primary", size="large", trailingIcon="symbol:forward-chevron",
+          disabled=(not canFinish), press=finish, buttonId="finish")
+        text (canFinish ? "You can change all of this later in Your details." : "Add your name to continue.")
+          font-size=13 color="hero.ink-faint" text-align="center" testId="finish-hint"

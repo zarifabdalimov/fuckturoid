@@ -11,6 +11,21 @@ theme
   hero.glass = rgba(255, 255, 255, 0.15)  scheme=fixed
   hero.cta = #ffffff  scheme=fixed
   hero.cta-ink = #0f1012  scheme=fixed
+  control.fill = light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.07))
+  control.line = light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.12))
+  control.focus = light-dark(rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.6))
+  control.ink = light-dark(#111214, #ffffff)
+  control.label = light-dark(rgba(0, 0, 0, 0.62), rgba(255, 255, 255, 0.75))
+  control.hint = light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.6))
+  control.placeholder = light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.38))
+  control.danger = light-dark(#c7362b, #ff7a7a)
+  control.success = light-dark(#16794a, #6ee7a8)
+  button.primary = light-dark(#111214, #ffffff)
+  button.primary-ink = light-dark(#ffffff, #0f1012)
+  button.secondary = light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.15))
+  button.secondary-ink = light-dark(#111214, #ffffff)
+  button.disabled = light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.15))
+  button.disabled-ink = light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.38))
 
 icons
   icon.bank = icon(sf "building.columns", svg "icons/bank.svg")

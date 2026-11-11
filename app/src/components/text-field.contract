@@ -1,0 +1,38 @@
+component TextField
+  props
+    label: string
+    value: string
+    placeholder: string
+    hint: string
+    hintTone: string
+    invalid: bool
+    edit: action
+    submit: action
+    fieldId: string
+    keyboard: string
+    autocomplete: string
+    autocapitalize: string
+    enterkeyhint: string
+    maxlength: number
+  slot
+  state focused = false
+  action began
+    focused = true
+  action ended
+    focused = false
+  view
+    column gap=8 min-width=0
+      text label font-size=13 font-weight=600 color="control.label" letter-spacing=0.3
+      row align-items="center" gap=8 min-height=54 padding="0 6px 0 16px" border-radius=16 box-sizing="border-box"
+        background-color="control.fill" border-width=1 border-style="solid"
+        border-color=(invalid ? "control.danger" : focused ? "control.focus" : "control.line")
+        input id=fieldId value=value input=edit submit=submit focus=began blur=ended placeholder=placeholder
+          aria-label=label inputmode=keyboard autocomplete=autocomplete autocapitalize=autocapitalize
+          enterkeyhint=enterkeyhint maxlength=maxlength appearance="none" outline="none" flex=1 min-width=0
+          padding="15px 10px 15px 0" font-size=17 color="control.ink" testId=fieldId
+          ::placeholder
+            color="control.placeholder"
+        children
+      if hint != ""
+        text hint font-size=13 testId=`${fieldId}-hint`
+          color=(hintTone == "error" ? "control.danger" : hintTone == "success" ? "control.success" : "control.hint")

@@ -3,6 +3,7 @@ use invoiceOf, noInvoice, BankAccount, accountFor, bankAccountOf from "./src/mod
 use Welcome from "./src/screens/welcome.contract"
 use InvoiceList, InvoiceDetail, InvoiceForm from "./src/screens/invoices.contract"
 use Details from "./src/screens/details.contract"
+use Onboarding from "./src/screens/onboarding.contract"
 use ClientList, ClientDetail, ClientForm from "./src/screens/clients.contract"
 use Confirm from "./src/screens/confirm.contract"
 use TabBar from "./src/screens/tab-bar.contract"
@@ -269,7 +270,12 @@ component App
                     openDetails=start, add=openAddInvoice, addClient=goAddClient, reload=reloadInvoices)
                 else
                   Welcome(route=entry.id, start=start)
-              if entry.name == "details"
+              if entry.name == "details" and not onboarded
+                Onboarding(route=entry.id, canFinish=canFinish, ico=ico, name=name, dic=dic, street=street, city=city,
+                  zip=zip, bankAccounts=bankAccounts, ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
+                  finish=finish, editIco=editIco, lookup=lookup, editName=editName, editDic=editDic,
+                  editStreet=editStreet, editCity=editCity, editZip=editZip)
+              if entry.name == "details" and onboarded
                 Details(route=entry.id, onboarded=onboarded, canFinish=canFinish,
                   ico=ico, name=name, dic=dic, street=street, city=city, zip=zip, bankAccounts=bankAccounts,
                   ares=ares, lookingUp=pending(looked), lookupFailed=failed(looked),
