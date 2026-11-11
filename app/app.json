@@ -1,13 +1,13 @@
 {
   "$schema": "../exact/scripts/app.schema.json",
-  "name": "Fuckturoid",
-  "short_name": "Fuckturoid",
+  "name": "F*ckturoid",
+  "short_name": "F*ckturoid",
   "id": "cz.fuckturoid.app",
   "start_url": "/",
   "display": "standalone",
   "app": {
     "id": "cz.fuckturoid.app",
-    "name": "Fuckturoid"
+    "name": "F*ckturoid"
   },
   "host": {
     "web": {},

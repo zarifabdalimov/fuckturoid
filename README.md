@@ -1,4 +1,4 @@
-# Fuckturoid
+# F*ckturoid
 
 Invoicing for phones, a spin-off of Fakturoid, built with [Exact](https://github.com/expo/exact).
 
