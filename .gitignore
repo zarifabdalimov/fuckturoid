@@ -1,0 +1,4 @@
+# The Exact runtime checkout (see README for the pinned commit)
+/exact/
+.idea/
+.DS_Store

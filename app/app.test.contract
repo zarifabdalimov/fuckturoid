@@ -1,0 +1,40 @@
+test "an empty form says what to do"
+  expect text "ico-hint" == "Enter your IČO and the rest fills in from ARES."
+  expect disabled "lookup"
+
+test "a short IČO and a wrong check digit are refused before asking ARES"
+  type "ico" "1234"
+  expect text "ico-hint" == "An IČO has 8 digits."
+  expect disabled "lookup"
+  type "ico" "28888287"
+  expect text "ico-hint" == "This isn't a valid IČO: its check digit doesn't match."
+  expect disabled "lookup"
+
+test "a valid IČO fills the details from ARES"
+  type "ico" "28888286"
+  clock data
+  expect text "name" == "STRV s.r.o."
+  expect text "dic" == "CZ28888286"
+  expect text "street" == "Rohanské nábřeží 678/23"
+  expect text "city" == "Praha 8"
+  expect text "zip" == "186 00"
+  expect text "ico-hint" == "Filled in from ARES: STRV s.r.o."
+
+test "ARES out of reach says so and keeps what was typed"
+  type "name" "Jan Novák"
+  fail fetch "https://ares.gov.cz"
+  type "ico" "28888286"
+  clock data
+  expect text "ico-hint" == "Couldn't reach ARES. Check your connection and try again."
+  expect text "name" == "Jan Novák"
+  pass fetch "https://ares.gov.cz"
+  tap "lookup"
+  clock data
+  expect text "name" == "STRV s.r.o."
+
+test "details survive a relaunch"
+  type "name" "Jan Novák"
+  type "city" "Brno"
+  reload
+  expect text "name" == "Jan Novák"
+  expect text "city" == "Brno"

@@ -1,0 +1,28 @@
+{
+  "$schema": "../exact/scripts/app.schema.json",
+  "name": "Fuckturoid",
+  "short_name": "Fuckturoid",
+  "id": "cz.fuckturoid.app",
+  "start_url": "/",
+  "display": "standalone",
+  "app": {
+    "id": "cz.fuckturoid.app",
+    "name": "Fuckturoid"
+  },
+  "host": {
+    "web": {},
+    "ios": {
+      "minimumOS": "17.0",
+      "deviceFamily": [
+        "iphone",
+        "ipad"
+      ]
+    }
+  },
+  "deploy": {
+    "store": {
+      "web": "0",
+      "ios": "0"
+    }
+  }
+}
