@@ -5,7 +5,7 @@ component Welcome
   view
     column navigationKey=`${route}` navigationBar="none" position="absolute" inset=0 testId="welcome"
       color-scheme="dark" status-bar-style="light-content" background-color="hero.base"
-      background-image="radial-gradient(120% 70% at 0% 0%, var(--hero.coral) 0%, transparent 60%), radial-gradient(110% 70% at 100% 100%, var(--hero.violet) 0%, transparent 65%), linear-gradient(165deg, var(--hero.top) 0%, var(--hero.base) 100%)"
+      background-image="radial-gradient(120% 60% at 50% 0%, var(--hero.glow) 0%, transparent 70%), radial-gradient(110% 60% at 50% 100%, var(--hero.haze) 0%, transparent 70%), linear-gradient(180deg, var(--hero.top) 0%, var(--hero.base) 100%)"
       scroll flex=1 min-height=0
         column min-height="100%" box-sizing="border-box" padding="56px 28px 24px" justify-content="flex-end"
           column width=72 height=72 border-radius=20 background-color="hero.glass"

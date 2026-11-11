@@ -1,13 +1,13 @@
 tamber brand
 
 theme
-  hero.base = #140b2e  scheme=fixed
-  hero.top = #2a1458  scheme=fixed
-  hero.coral = #ff5f6d  scheme=fixed
-  hero.violet = #7c4dff  scheme=fixed
+  hero.base = #0f1012  scheme=fixed
+  hero.top = #202226  scheme=fixed
+  hero.glow = rgba(255, 255, 255, 0.10)  scheme=fixed
+  hero.haze = rgba(140, 150, 168, 0.16)  scheme=fixed
   hero.ink = #ffffff  scheme=fixed
   hero.ink-soft = rgba(255, 255, 255, 0.75)  scheme=fixed
   hero.ink-faint = rgba(255, 255, 255, 0.6)  scheme=fixed
   hero.glass = rgba(255, 255, 255, 0.15)  scheme=fixed
   hero.cta = #ffffff  scheme=fixed
-  hero.cta-ink = #1a1033  scheme=fixed
+  hero.cta-ink = #0f1012  scheme=fixed
